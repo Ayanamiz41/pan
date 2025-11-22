@@ -5,7 +5,11 @@ import java.util.List;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
-
+/**
+ * @Description: 用户信息 Service
+ * @Author: false
+ * @Date: 2025/07/23 12:25:33
+ */
 public interface UserInfoService{
 
 	/**

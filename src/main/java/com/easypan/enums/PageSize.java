@@ -1,6 +1,10 @@
 package com.easypan.enums;
 
-
+/**
+ * @Description: Enum 分页枚举
+ * @Author: KunSpireUp
+ * @Date: 16/03/2024 22:20
+ */
 public enum PageSize {
 
 	SIZE15(15),

@@ -3,7 +3,11 @@ package com.easypan.entity.query;
 import java.util.Date;
 
 
-
+/**
+ * @Description: 用户信息
+ * @Author: false
+ * @Date: 2025/07/23 12:25:33
+ */
 public class UserInfoQuery extends BaseQuery {
 	/**
  	 * 用户ID 查询对象

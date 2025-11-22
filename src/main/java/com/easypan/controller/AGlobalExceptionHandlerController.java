@@ -17,7 +17,11 @@ import javax.servlet.http.HttpServletRequest;
 
 import java.net.BindException;
 
-
+/**
+ * @Description: 全局异常处理
+ * @Author: KunSpireUp
+ * @Date: 3/27/2024 12:52 AM
+ */
 @RestControllerAdvice
 public class AGlobalExceptionHandlerController extends ABaseController{
 

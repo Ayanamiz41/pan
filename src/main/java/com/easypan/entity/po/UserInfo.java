@@ -10,7 +10,11 @@ import org.springframework.format.annotation.DateTimeFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 
-
+/**
+ * @Description: 用户信息
+ * @Author: false
+ * @Date: 2025/07/23 12:25:33
+ */
 public class UserInfo implements Serializable {
 	/**
  	 * 用户ID

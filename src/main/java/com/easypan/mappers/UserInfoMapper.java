@@ -2,7 +2,11 @@ package com.easypan.mappers;
 
 import org.apache.ibatis.annotations.Param;
 
-
+/**
+ * @Description: 用户信息 Mapper
+ * @Author: false
+ * @Date: 2025/07/23 12:25:33
+ */
 public interface UserInfoMapper<T, P> extends BaseMapper {
 
 	/**

@@ -11,7 +11,11 @@ import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
 import org.springframework.stereotype.Service;
 import javax.annotation.Resource;
-
+/**
+ * @Description: 用户信息 业务接口实现
+ * @Author: false
+ * @Date: 2025/07/23 12:25:33
+ */
 @Service("UserInfoMapper")
 public class UserInfoServiceImpl implements UserInfoService{
 

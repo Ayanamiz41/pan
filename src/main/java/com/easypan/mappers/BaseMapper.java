@@ -3,7 +3,10 @@ package com.easypan.mappers;
 import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
-
+/**
+ * @Description: Mapper 基础抽象方法
+ * @Author: KunSpireUp
+ */
 
 public interface BaseMapper<T, P> {
     /**

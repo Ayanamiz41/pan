@@ -1,6 +1,10 @@
 package com.easypan.enums;
 
-
+/**
+ * @Description: 响应参数
+ * @Author: KunSpireUp
+ * @Date: 3/27/2024 12:00 AM
+ */
 public enum ResponseCodeEnum {
 
 	CODE_200(200, "请求成功"),

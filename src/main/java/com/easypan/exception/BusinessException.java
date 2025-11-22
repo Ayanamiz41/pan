@@ -2,7 +2,11 @@ package com.easypan.exception;
 
 import com.easypan.enums.ResponseCodeEnum;;
 
-
+/**
+ * @Description: 业务异常
+ * @Author: KunSpireUp
+ * @Date: 3/26/2024 11:25 PM
+ */
 public class BusinessException extends RuntimeException {
 
 	private ResponseCodeEnum codeEnum;

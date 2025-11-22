@@ -1,6 +1,10 @@
 package com.easypan.entity.query;
 
-
+/**
+ * @Description: 分页参数
+ * @Author: KunSpireUp
+ * @Date: 16/03/2024 22:28
+ */
 public class BaseQuery {
 
 	private SimplePage simplePage;

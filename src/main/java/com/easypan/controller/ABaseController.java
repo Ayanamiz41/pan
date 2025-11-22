@@ -4,7 +4,11 @@ import com.easypan.entity.vo.ResponseVO;;
 
 import com.easypan.enums.ResponseCodeEnum;;
 
-
+/**
+ * @Description: 信息返回状态
+ * @Author: KunSpireUp
+ * @Date: 3/27/2024 12:24 AM
+ */
 public class ABaseController {
 
 	protected static final String STATUS_SUCCESS = "success";
