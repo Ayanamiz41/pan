@@ -4,7 +4,10 @@ package com.easypan.service.impl;
 import java.util.Date;
 import java.util.List;
 
+import com.easypan.component.RedisComponent;
+import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SysSettingDto;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.SimplePage;
 import com.easypan.entity.query.UserInfoQuery;
@@ -17,11 +20,17 @@ import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.EmailCode;
 import com.easypan.entity.query.EmailCodeQuery;
 import com.easypan.utils.StringTools;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import javax.mail.internet.MimeMessage;
+
 /**
  * @Description: 邮箱验证码 业务接口实现
  * @Author: false
@@ -30,10 +39,19 @@ import javax.annotation.Resource;
 @Service("EmailCodeMapper")
 public class EmailCodeServiceImpl implements EmailCodeService{
 
-	@Resource
+	private static final Logger logger = LoggerFactory.getLogger(EmailCodeServiceImpl.class);
+	@Autowired
 	private EmailCodeMapper<EmailCode, EmailCodeQuery> emailCodeMapper;
 	@Autowired
 	private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
+	@Autowired
+	private JavaMailSender mailSender;
+    @Autowired
+    private JavaMailSender javaMailSender;
+	@Autowired
+	private AppConfig appConfig;
+	@Autowired
+	private RedisComponent  redisComponent;
 
 	/**
  	 * 根据条件查询列表
@@ -131,7 +149,8 @@ public class EmailCodeServiceImpl implements EmailCodeService{
 		}
 		//生成随机数串
 		String code = StringTools.getRandomNumber(Constants.LENGTH_5);
-		//TODO 发送验证码
+		//发送验证码
+		sendEmailCode(email, code);
 		//停用此邮箱以前的验证码
 		emailCodeMapper.disableEmailCode(email);
 		//插入新验证码
@@ -141,5 +160,22 @@ public class EmailCodeServiceImpl implements EmailCodeService{
 		emailCode.setStatus(Constants.ZERO);
 		emailCode.setCreateTime(new Date());
 		emailCodeMapper.insert(emailCode);
+	}
+
+	private void sendEmailCode(String toEmail,String code){
+		try {
+			MimeMessage message = javaMailSender.createMimeMessage();
+			MimeMessageHelper helper = new MimeMessageHelper(message,true);
+			helper.setFrom(appConfig.getSendUserName());
+			helper.setTo(toEmail);
+			SysSettingDto sysSettingDto = redisComponent.getSysSettingDto();
+			helper.setSubject(sysSettingDto.getRegisterEmailTitle());
+			helper.setText(String.format(sysSettingDto.getRegisterEmailContent(),code));
+			helper.setSentDate(new Date());
+			javaMailSender.send(message);
+		} catch (Exception e) {
+			logger.error("邮件发送失败",e);
+			throw new BusinessException("邮件发送失败");
+		}
 	}
 }

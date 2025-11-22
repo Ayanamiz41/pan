@@ -2,20 +2,16 @@ package com.easypan.controller;
 
 
 import java.io.IOException;
-import java.util.List;
 
 import com.easypan.entity.constants.Constants;
-import com.easypan.entity.dto.CreateImageCode;
+import com.easypan.utils.CreateImageCode;
 import com.easypan.exception.BusinessException;
 import com.easypan.service.EmailCodeService;
 import com.easypan.service.UserInfoService;
 import com.easypan.entity.vo.ResponseVO;
-import com.easypan.entity.po.UserInfo;
-import com.easypan.entity.query.UserInfoQuery;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
