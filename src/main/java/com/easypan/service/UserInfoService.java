@@ -2,6 +2,8 @@ package com.easypan.service;
 
 
 import java.util.List;
+
+import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
@@ -110,4 +112,12 @@ public interface UserInfoService{
 	 * @param emailCode
 	 */
     void register(String email, String nickname, String password, String emailCode);
+
+	/**
+	 * 登录
+	 * @param email
+	 * @param password
+	 * @return
+	 */
+	SessionWebUserDto login(String email, String password);
 }

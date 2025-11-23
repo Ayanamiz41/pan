@@ -5,11 +5,13 @@ import java.util.Date;
 import java.util.List;
 
 import com.easypan.component.RedisComponent;
+import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.dto.SysSettingDto;
+import com.easypan.entity.dto.UserSpaceDto;
 import com.easypan.entity.query.SimplePage;
 import com.easypan.enums.PageSize;
-import com.easypan.enums.ResponseCodeEnum;
 import com.easypan.enums.UserStatusEnum;
 import com.easypan.exception.BusinessException;
 import com.easypan.mappers.UserInfoMapper;
@@ -19,12 +21,11 @@ import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
 import com.easypan.utils.StringTools;
-import org.aspectj.lang.annotation.Aspect;
+import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.annotation.Resource;
 /**
  * @Description: 用户信息 业务接口实现
  * @Author: false
@@ -39,6 +40,8 @@ public class UserInfoServiceImpl implements UserInfoService{
 	private EmailCodeService  emailCodeService;
 	@Autowired
 	private RedisComponent  redisComponent;
+	@Autowired
+	private AppConfig appConfig;
 
 	/**
  	 * 根据条件查询列表
@@ -214,5 +217,35 @@ public class UserInfoServiceImpl implements UserInfoService{
 		SysSettingDto sysSettingDto = redisComponent.getSysSettingDto();
 		userInfo.setTotalSpace(sysSettingDto.getUserInitTotalSpace() * Constants.MB);
 		userInfoMapper.insert(userInfo);
+	}
+
+	/**
+	 * 登录
+	 * @param email
+	 * @param password
+	 * @return
+	 */
+	public SessionWebUserDto login(String email, String password) {
+		UserInfo userInfo = userInfoMapper.selectByEmail(email);
+		if(userInfo==null||!userInfo.getPassword().equals(password)){
+			throw new BusinessException("账号或者密码错误");
+		}
+		if(userInfo.getStatus().equals(UserStatusEnum.DISABLE.getStatus())){
+			throw new BusinessException("账号已被禁用");
+		}
+		UserInfo updateInfo = new UserInfo();
+		updateInfo.setLastLoginTime(new Date());
+		userInfoMapper.updateByUserId(updateInfo, userInfo.getUserId());
+		SessionWebUserDto sessionWebUserDto = new SessionWebUserDto();
+		sessionWebUserDto.setNickName(userInfo.getNickName());
+		sessionWebUserDto.setUserId(userInfo.getUserId());
+		if(ArrayUtils.contains(appConfig.getAdminEmails().split(","), email)){
+			sessionWebUserDto.setIsAdmin(true);
+		}else sessionWebUserDto.setIsAdmin(false);
+		UserSpaceDto userSpaceDto = new UserSpaceDto();
+		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
+		userSpaceDto.setUseSpace(userInfo.getUseSpace());
+		redisComponent.saveUserSpace(userInfo.getUserId(), userSpaceDto);
+		return sessionWebUserDto;
 	}
 }

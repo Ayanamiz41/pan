@@ -6,6 +6,7 @@ import java.io.IOException;
 import com.easypan.annotation.GlobalInterceptor;
 import com.easypan.annotation.VerifyParam;
 import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.enums.VerifyRegexEnum;
 import com.easypan.utils.CreateImageCode;
 import com.easypan.exception.BusinessException;
@@ -85,7 +86,7 @@ public class AccountController extends ABaseController{
 
 	@PostMapping("/register")
 	@GlobalInterceptor(checkParams = true)
-	public ResponseVO sendEmailCode(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
+	public ResponseVO register(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
 									@VerifyParam(required = true) String nickName,
 									@VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,min = 8,max = 18) String password,
 									@VerifyParam(required = true) String checkCode,
@@ -101,6 +102,28 @@ public class AccountController extends ABaseController{
 
 			// 返回成功响应（无数据）
 			return getSuccessResponseVO(null);
+		} finally {
+			// 无论成功失败，都清理 session 中的图片验证码，防止重复使用
+			session.removeAttribute(Constants.CHECK_CODE_KEY);
+		}
+	}
+
+	@PostMapping("/login")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO login(HttpSession session, @VerifyParam(required = true) String email,
+									@VerifyParam(required = true) String password,
+									@VerifyParam(required = true) String checkCode) {
+		try {
+			// 从 session 中获取之前保存的图片验证码，并忽略大小写比对
+			if (!checkCode.equalsIgnoreCase((String) session.getAttribute(Constants.CHECK_CODE_KEY))) {
+				// 验证码不匹配，抛出业务异常
+				throw new BusinessException("图片验证码不正确");
+			}
+
+			SessionWebUserDto sessionWebUserDto = userInfoService.login(email,password);
+			session.setAttribute(Constants.SESSION_KEY, sessionWebUserDto);
+			// 返回成功响应
+			return getSuccessResponseVO(sessionWebUserDto);
 		} finally {
 			// 无论成功失败，都清理 session 中的图片验证码，防止重复使用
 			session.removeAttribute(Constants.CHECK_CODE_KEY);
