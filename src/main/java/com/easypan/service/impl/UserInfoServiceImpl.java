@@ -1,15 +1,29 @@
 package com.easypan.service.impl;
 
 
+import java.util.Date;
 import java.util.List;
+
+import com.easypan.component.RedisComponent;
+import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SysSettingDto;
 import com.easypan.entity.query.SimplePage;
 import com.easypan.enums.PageSize;
+import com.easypan.enums.ResponseCodeEnum;
+import com.easypan.enums.UserStatusEnum;
+import com.easypan.exception.BusinessException;
 import com.easypan.mappers.UserInfoMapper;
+import com.easypan.service.EmailCodeService;
 import com.easypan.service.UserInfoService;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
+import com.easypan.utils.StringTools;
+import org.aspectj.lang.annotation.Aspect;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import javax.annotation.Resource;
 /**
  * @Description: 用户信息 业务接口实现
@@ -19,8 +33,12 @@ import javax.annotation.Resource;
 @Service("UserInfoMapper")
 public class UserInfoServiceImpl implements UserInfoService{
 
-	@Resource
+	@Autowired
 	private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
+	@Autowired
+	private EmailCodeService  emailCodeService;
+	@Autowired
+	private RedisComponent  redisComponent;
 
 	/**
  	 * 根据条件查询列表
@@ -163,4 +181,38 @@ public class UserInfoServiceImpl implements UserInfoService{
 	@Override
 	public Integer deleteUserInfoByQqOpenId(String qqOpenId) {
 		return this.userInfoMapper.deleteByQqOpenId(qqOpenId);}
+
+	/**
+	 * 注册
+	 * @param email
+	 * @param nickName
+	 * @param password
+	 * @param emailCode
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void register(String email, String nickName, String password, String emailCode) {
+		UserInfo userInfo = userInfoMapper.selectByEmail(email);
+		if(userInfo!=null){
+			throw new BusinessException("邮箱账号已存在");
+		}
+		UserInfo nickNameUser =  userInfoMapper.selectByNickName(nickName);
+		if(nickNameUser!=null){
+			throw new BusinessException("昵称已存在");
+		}
+		//校验邮箱验证码
+		emailCodeService.checkCode(email,emailCode);
+
+		String userId = StringTools.getRandomNumber(Constants.LENGTH_10);
+		userInfo = new UserInfo();
+		userInfo.setUserId(userId);
+		userInfo.setEmail(email);
+		userInfo.setNickName(nickName);
+		userInfo.setPassword(StringTools.encodeByMd5(password));
+		userInfo.setJoinTime(new Date());
+		userInfo.setStatus(UserStatusEnum.ENABLE.getStatus());
+		userInfo.setUseSpace(0L);
+		SysSettingDto sysSettingDto = redisComponent.getSysSettingDto();
+		userInfo.setTotalSpace(sysSettingDto.getUserInitTotalSpace() * Constants.MB);
+		userInfoMapper.insert(userInfo);
+	}
 }

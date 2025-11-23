@@ -3,7 +3,10 @@ package com.easypan.controller;
 
 import java.io.IOException;
 
+import com.easypan.annotation.GlobalInterceptor;
+import com.easypan.annotation.VerifyParam;
 import com.easypan.entity.constants.Constants;
+import com.easypan.enums.VerifyRegexEnum;
 import com.easypan.utils.CreateImageCode;
 import com.easypan.exception.BusinessException;
 import com.easypan.service.EmailCodeService;
@@ -58,7 +61,10 @@ public class AccountController extends ABaseController{
 	}
 
 	@PostMapping("/sendEmailCode")
-	public ResponseVO sendEmailCode(HttpSession session, String email, String checkCode, Integer type) {
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO sendEmailCode(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
+									@VerifyParam(required = true) String checkCode,
+									@VerifyParam(required = true) Integer type) {
 		try {
 			// 从 session 中获取之前保存的图片验证码，并忽略大小写比对
 			if (!checkCode.equalsIgnoreCase((String) session.getAttribute(Constants.CHECK_CODE_KEY_EMAIL))) {
@@ -74,6 +80,30 @@ public class AccountController extends ABaseController{
 		} finally {
 			// 无论成功失败，都清理 session 中的图片验证码，防止重复使用
 			session.removeAttribute(Constants.CHECK_CODE_KEY_EMAIL);
+		}
+	}
+
+	@PostMapping("/register")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO sendEmailCode(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
+									@VerifyParam(required = true) String nickName,
+									@VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,min = 8,max = 18) String password,
+									@VerifyParam(required = true) String checkCode,
+									@VerifyParam(required = true) String emailCode) {
+		try {
+			// 从 session 中获取之前保存的图片验证码，并忽略大小写比对
+			if (!checkCode.equalsIgnoreCase((String) session.getAttribute(Constants.CHECK_CODE_KEY))) {
+				// 验证码不匹配，抛出业务异常
+				throw new BusinessException("图片验证码不正确");
+			}
+
+			userInfoService.register(email,nickName,password,emailCode);
+
+			// 返回成功响应（无数据）
+			return getSuccessResponseVO(null);
+		} finally {
+			// 无论成功失败，都清理 session 中的图片验证码，防止重复使用
+			session.removeAttribute(Constants.CHECK_CODE_KEY);
 		}
 	}
 }

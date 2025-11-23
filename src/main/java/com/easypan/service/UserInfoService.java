@@ -101,4 +101,13 @@ public interface UserInfoService{
  	 * 根据 QqOpenId 删除
  	 */
 	Integer deleteUserInfoByQqOpenId(String qqOpenId);
+
+	/**
+	 * 注册
+	 * @param email
+	 * @param nickname
+	 * @param password
+	 * @param emailCode
+	 */
+    void register(String email, String nickname, String password, String emailCode);
 }
