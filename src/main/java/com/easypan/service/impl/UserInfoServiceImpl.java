@@ -275,6 +275,7 @@ public class UserInfoServiceImpl implements UserInfoService{
 		// 创建用户空间信息对象，并设置总空间和已用空间
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
 		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
+		//TODO 查询当前用户已经上传文件大小总和
 		userSpaceDto.setUseSpace(userInfo.getUseSpace());
 
 		// 将用户空间信息保存到 Redis 中（用于快速读取和缓存）

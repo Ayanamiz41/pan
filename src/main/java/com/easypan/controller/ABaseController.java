@@ -1,11 +1,14 @@
 package com.easypan.controller;
 
+import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.vo.ResponseVO;;
 
 import com.easypan.enums.ResponseCodeEnum;
 import com.easypan.utils.StringTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;;import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -70,5 +73,10 @@ public class ABaseController {
 				}
 			}
 		}
+	}
+
+	protected SessionWebUserDto getUserInfoFromSession(HttpSession session){
+		SessionWebUserDto sessionWebUserDto = (SessionWebUserDto)session.getAttribute(Constants.SESSION_KEY);
+		return sessionWebUserDto;
 	}
 }

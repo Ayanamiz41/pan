@@ -35,7 +35,7 @@ public class RedisUtils<V> {
             redisTemplate.opsForValue().set(key, value);
             return true;
         } catch (Exception e) {
-            logger.error("设置redisKey:{},value:{}失败",key,value);
+            logger.error("设置redisKey:{},value:{}失败",key,value,e);
             return false;
         }
     }
@@ -56,7 +56,7 @@ public class RedisUtils<V> {
             }
             return true;
         } catch (Exception e) {
-            logger.error("设置redisKey:{},value:{}失败",key,value);
+            logger.error("设置redisKey:{},value:{}失败",key,value,e);
             return false;
         }
     }

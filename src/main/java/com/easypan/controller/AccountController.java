@@ -7,21 +7,28 @@ import java.io.PrintWriter;
 
 import com.easypan.annotation.GlobalInterceptor;
 import com.easypan.annotation.VerifyParam;
+import com.easypan.component.RedisComponent;
 import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
 import com.easypan.entity.dto.SessionWebUserDto;
+import com.easypan.entity.dto.UserSpaceDto;
+import com.easypan.entity.po.UserInfo;
 import com.easypan.enums.VerifyRegexEnum;
 import com.easypan.utils.CreateImageCode;
 import com.easypan.exception.BusinessException;
 import com.easypan.service.EmailCodeService;
 import com.easypan.service.UserInfoService;
 import com.easypan.entity.vo.ResponseVO;
+import com.easypan.utils.StringTools;
+import org.apache.catalina.User;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import javax.mail.Multipart;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
@@ -43,6 +50,8 @@ public class AccountController extends ABaseController{
 	private EmailCodeService emailCodeService;
     @Autowired
     private AppConfig appConfig;
+	@Autowired
+	private RedisComponent  redisComponent;
 
 	@GetMapping("/checkCode")
 	public void checkCode(HttpServletResponse response, HttpSession session, Integer type) throws IOException {
@@ -74,7 +83,7 @@ public class AccountController extends ABaseController{
 	}
 
 	@PostMapping("/sendEmailCode")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO sendEmailCode(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
 									@VerifyParam(required = true) String checkCode,
 									@VerifyParam(required = true) Integer type) {
@@ -97,7 +106,7 @@ public class AccountController extends ABaseController{
 	}
 
 	@PostMapping("/register")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO register(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
 									@VerifyParam(required = true) String nickName,
 									@VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,min = 8,max = 18) String password,
@@ -121,7 +130,7 @@ public class AccountController extends ABaseController{
 	}
 
 	@PostMapping("/login")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO login(HttpSession session, @VerifyParam(required = true) String email,
 									@VerifyParam(required = true) String password,
 									@VerifyParam(required = true) String checkCode) {
@@ -143,7 +152,7 @@ public class AccountController extends ABaseController{
 	}
 
 	@PostMapping("/resetPwd")
-	@GlobalInterceptor(checkParams = true)
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
 	public ResponseVO resetPwd(HttpSession session, @VerifyParam(required = true,regex = VerifyRegexEnum.EMAIL,max=150) String email,
 							   @VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,min = 8,max = 18) String password,
 							   @VerifyParam(required = true) String checkCode,
@@ -165,7 +174,7 @@ public class AccountController extends ABaseController{
 	}
 
 	@GetMapping("/getAvatar/{userId}")
-	@GlobalInterceptor(checkParams = true) // 切面拦截，开启参数校验
+	@GlobalInterceptor(checkParams = true,checkLogin = false) // 切面拦截，开启参数校验
 	public void getAvatar(HttpServletResponse response,
 						 @VerifyParam(required = true) // 校验 userId 不为空
 						 @PathVariable String userId) {
@@ -220,4 +229,60 @@ public class AccountController extends ABaseController{
 			}
 		}
 	}
+
+	@GetMapping("/getUserInfo")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO getUserInfo(HttpSession session) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		return getSuccessResponseVO(sessionWebUserDto);
+	}
+
+	@PostMapping("/getUseSpace")
+	@GlobalInterceptor
+	public ResponseVO getUseSpace(HttpSession session) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		UserSpaceDto userSpaceDto = redisComponent.getUserSpace(sessionWebUserDto.getUserId());
+		return getSuccessResponseVO(userSpaceDto);
+	}
+
+	@PostMapping("/logout")
+	public ResponseVO logout(HttpSession session) {
+		session.invalidate();
+		return getSuccessResponseVO(null);
+	}
+
+	@PostMapping("/updateUserAvatar")
+	@GlobalInterceptor
+	public ResponseVO updateUserAvatar(HttpSession session, @RequestBody MultipartFile avatar) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		String baseFolder = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE;
+		File targetFileFolder = new File(baseFolder+Constants.FILE_FOLDER_AVATAR_NAME);
+		if (!targetFileFolder.exists()) {
+			targetFileFolder.mkdirs();
+		}
+		File targetFile = new File(targetFileFolder.getPath()+"/"+sessionWebUserDto.getUserId()+Constants.AVATAR_SUFFIX);
+		try{
+			avatar.transferTo(targetFile);
+		}catch (Exception e) {
+			logger.error("上传头像失败",e);
+		}
+		UserInfo userInfo = new UserInfo();
+		userInfo.setQqAvatar("");
+		userInfoService.updateUserInfoByUserId(userInfo,sessionWebUserDto.getUserId());
+		sessionWebUserDto.setAvatar(null);
+		session.setAttribute(Constants.SESSION_KEY, sessionWebUserDto);
+		return getSuccessResponseVO(null);
+	}
+
+	@PostMapping("/updatePassword")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO updatePassword(HttpSession session,
+									 @VerifyParam(required = true,regex = VerifyRegexEnum.PASSWORD,min=8,max=18)String password ) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		UserInfo userInfo = new UserInfo();
+		userInfo.setPassword(StringTools.encodeByMd5(password));
+		userInfoService.updateUserInfoByUserId(userInfo,sessionWebUserDto.getUserId());
+		return getSuccessResponseVO(null);
+	}
+
 }

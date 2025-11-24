@@ -2,6 +2,8 @@ package com.easypan.aspect;
 
 import com.easypan.annotation.GlobalInterceptor;
 import com.easypan.annotation.VerifyParam;
+import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.enums.ResponseCodeEnum;
 import com.easypan.exception.BusinessException;
 import com.easypan.utils.StringTools;
@@ -14,7 +16,12 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
@@ -56,6 +63,13 @@ public class GlobalOperationAspect {
             if(interceptor == null){
                 // 没有注解则跳过，不做校验
                 return;
+            }
+
+            /**
+             * 校验登录
+             */
+            if(interceptor.checkLogin()||interceptor.checkAdmin()){
+                checkLogin(interceptor.checkAdmin());
             }
 
             /**
@@ -179,6 +193,18 @@ public class GlobalOperationAspect {
          */
         if(!isEmpty&&!StringTools.isEmpty(verifyParam.regex().getRegex())&&!VerifyUtils.verify(verifyParam.regex(),String.valueOf(value))){
             throw new BusinessException(ResponseCodeEnum.CODE_601);
+        }
+    }
+
+    private void checkLogin(Boolean checkAdmin){
+        HttpServletRequest request = ((ServletRequestAttributes)RequestContextHolder.getRequestAttributes()).getRequest();
+        HttpSession session = request.getSession();
+        SessionWebUserDto sessionWebUserDto = (SessionWebUserDto) session.getAttribute(Constants.SESSION_KEY);
+        if(sessionWebUserDto == null){
+            throw new BusinessException(ResponseCodeEnum.CODE_901);
+        }
+        if(checkAdmin&&!sessionWebUserDto.getIsAdmin()){
+            throw new BusinessException(ResponseCodeEnum.CODE_404);
         }
     }
 }
