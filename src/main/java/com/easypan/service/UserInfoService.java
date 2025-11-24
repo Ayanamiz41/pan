@@ -7,6 +7,9 @@ import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.UserInfo;
 import com.easypan.entity.query.UserInfoQuery;
+
+import javax.servlet.http.HttpServletResponse;
+
 /**
  * @Description: 用户信息 Service
  * @Author: false
@@ -120,4 +123,13 @@ public interface UserInfoService{
 	 * @return
 	 */
 	SessionWebUserDto login(String email, String password);
+
+	/**
+	 * 重置密码
+	 * @param email
+	 * @param password
+	 * @param emailCode
+	 */
+	void resetPwd(String email, String password, String emailCode);
+
 }

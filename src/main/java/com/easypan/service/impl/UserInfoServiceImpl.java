@@ -1,6 +1,7 @@
 package com.easypan.service.impl;
 
 
+import java.io.File;
 import java.util.Date;
 import java.util.List;
 
@@ -25,6 +26,8 @@ import org.apache.commons.lang3.ArrayUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import javax.servlet.http.HttpServletResponse;
 
 /**
  * @Description: 用户信息 业务接口实现
@@ -186,66 +189,123 @@ public class UserInfoServiceImpl implements UserInfoService{
 		return this.userInfoMapper.deleteByQqOpenId(qqOpenId);}
 
 	/**
-	 * 注册
-	 * @param email
-	 * @param nickName
-	 * @param password
-	 * @param emailCode
+	 * 注册方法
+	 * @param email 用户邮箱
+	 * @param nickName 用户昵称
+	 * @param password 用户密码（会进行MD5加密）
+	 * @param emailCode 邮箱验证码，用于验证邮箱有效性
 	 */
-	@Transactional(rollbackFor = Exception.class)
+	@Transactional(rollbackFor = Exception.class) // 开启事务，出现异常时自动回滚
 	public void register(String email, String nickName, String password, String emailCode) {
+		// 查询该邮箱是否已被注册，若存在则抛异常
 		UserInfo userInfo = userInfoMapper.selectByEmail(email);
-		if(userInfo!=null){
+		if(userInfo != null){
 			throw new BusinessException("邮箱账号已存在");
 		}
+
+		// 查询该昵称是否已被占用，若存在则抛异常
 		UserInfo nickNameUser =  userInfoMapper.selectByNickName(nickName);
-		if(nickNameUser!=null){
+		if(nickNameUser != null){
 			throw new BusinessException("昵称已存在");
 		}
-		//校验邮箱验证码
-		emailCodeService.checkCode(email,emailCode);
 
+		// 校验邮箱验证码，验证邮箱所有权和验证码有效性
+		emailCodeService.checkCode(email, emailCode);
+
+		// 生成长度为10的随机用户ID
 		String userId = StringTools.getRandomNumber(Constants.LENGTH_10);
+
+		// 创建新的用户实体并赋值
 		userInfo = new UserInfo();
 		userInfo.setUserId(userId);
 		userInfo.setEmail(email);
 		userInfo.setNickName(nickName);
+		// 密码经过MD5加密后保存，避免明文存储
 		userInfo.setPassword(StringTools.encodeByMd5(password));
-		userInfo.setJoinTime(new Date());
-		userInfo.setStatus(UserStatusEnum.ENABLE.getStatus());
-		userInfo.setUseSpace(0L);
+		userInfo.setJoinTime(new Date());               // 记录注册时间
+		userInfo.setStatus(UserStatusEnum.ENABLE.getStatus()); // 默认启用状态
+		userInfo.setUseSpace(0L);                        // 初始已用空间为0
+
+		// 从 Redis 获取系统配置，设置用户初始可用总空间（单位转换为字节）
 		SysSettingDto sysSettingDto = redisComponent.getSysSettingDto();
 		userInfo.setTotalSpace(sysSettingDto.getUserInitTotalSpace() * Constants.MB);
+
+		// 插入新用户数据到数据库
 		userInfoMapper.insert(userInfo);
 	}
 
+
 	/**
-	 * 登录
-	 * @param email
-	 * @param password
-	 * @return
+	 * 登录方法
+	 * @param email 用户邮箱
+	 * @param password 用户密码（这里是明文比对，实际项目建议密码加密比对）
+	 * @return 登录成功后封装的用户会话信息 SessionWebUserDto
 	 */
 	public SessionWebUserDto login(String email, String password) {
+		// 根据邮箱查询用户信息
 		UserInfo userInfo = userInfoMapper.selectByEmail(email);
-		if(userInfo==null||!userInfo.getPassword().equals(password)){
+
+		// 如果用户不存在或者密码不匹配，抛出业务异常
+		if(userInfo == null || !userInfo.getPassword().equals(password)){
 			throw new BusinessException("账号或者密码错误");
 		}
+
+		// 判断用户状态是否被禁用，如果是则抛出异常
 		if(userInfo.getStatus().equals(UserStatusEnum.DISABLE.getStatus())){
 			throw new BusinessException("账号已被禁用");
 		}
+
+		// 更新用户的最后登录时间
 		UserInfo updateInfo = new UserInfo();
 		updateInfo.setLastLoginTime(new Date());
 		userInfoMapper.updateByUserId(updateInfo, userInfo.getUserId());
+
+		// 创建会话用户对象，封装用户基本信息
 		SessionWebUserDto sessionWebUserDto = new SessionWebUserDto();
 		sessionWebUserDto.setNickName(userInfo.getNickName());
 		sessionWebUserDto.setUserId(userInfo.getUserId());
+
+		// 判断该邮箱是否为管理员邮箱，设置管理员标识
 		if(ArrayUtils.contains(appConfig.getAdminEmails().split(","), email)){
 			sessionWebUserDto.setIsAdmin(true);
-		}else sessionWebUserDto.setIsAdmin(false);
+		} else {
+			sessionWebUserDto.setIsAdmin(false);
+		}
+
+		// 创建用户空间信息对象，并设置总空间和已用空间
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
 		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
 		userSpaceDto.setUseSpace(userInfo.getUseSpace());
+
+		// 将用户空间信息保存到 Redis 中（用于快速读取和缓存）
 		redisComponent.saveUserSpace(userInfo.getUserId(), userSpaceDto);
+
+		// 返回封装好的会话用户信息
 		return sessionWebUserDto;
 	}
+
+
+	/**
+	 * 重置密码
+	 * @param email
+	 * @param password
+	 * @param emailCode
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void resetPwd(String email, String password, String emailCode) {
+		// 1. 查询账号
+		UserInfo userInfo = userInfoMapper.selectByEmail(email);
+		if(userInfo == null){
+			throw new BusinessException("账号不存在");
+		}
+
+		// 2. 校验验证码
+		emailCodeService.checkCode(email, emailCode);
+
+		// 3. 修改密码
+		UserInfo updateInfo = new UserInfo();
+		updateInfo.setPassword(StringTools.encodeByMd5(password));
+		userInfoMapper.updateByEmail(updateInfo, email);
+	}
+
 }
