@@ -2,9 +2,11 @@ package com.easypan.controller;
 
 import com.easypan.entity.constants.Constants;
 import com.easypan.entity.dto.SessionWebUserDto;
+import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.vo.ResponseVO;;
 
 import com.easypan.enums.ResponseCodeEnum;
+import com.easypan.utils.CopyTools;
 import com.easypan.utils.StringTools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;;import javax.servlet.http.HttpServletResponse;
@@ -78,5 +80,15 @@ public class ABaseController {
 	protected SessionWebUserDto getUserInfoFromSession(HttpSession session){
 		SessionWebUserDto sessionWebUserDto = (SessionWebUserDto)session.getAttribute(Constants.SESSION_KEY);
 		return sessionWebUserDto;
+	}
+
+	protected <S,T>PaginationResultVO<T> convert2PaginationVO(PaginationResultVO<S> result,Class<T> classz){
+		PaginationResultVO<T> paginationResultVO = new PaginationResultVO<>();
+		paginationResultVO.setList(CopyTools.copyList(result.getList(),classz));
+		paginationResultVO.setPageNo(result.getPageNo());
+		paginationResultVO.setPageSize(result.getPageSize());
+		paginationResultVO.setPageTotal(result.getPageTotal());
+		paginationResultVO.setTotalCount(result.getTotalCount());
+		return paginationResultVO;
 	}
 }
