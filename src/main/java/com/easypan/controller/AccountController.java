@@ -4,6 +4,10 @@ package com.easypan.controller;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
+import java.util.HashMap;
+import java.util.Map;
 
 import com.easypan.annotation.GlobalInterceptor;
 import com.easypan.annotation.VerifyParam;
@@ -284,5 +288,29 @@ public class AccountController extends ABaseController{
 		userInfoService.updateUserInfoByUserId(userInfo,sessionWebUserDto.getUserId());
 		return getSuccessResponseVO(null);
 	}
+
+	@PostMapping("/qqlogin")
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
+	public ResponseVO qqlogin(HttpSession session,String callbackUrl) throws UnsupportedEncodingException {
+		String state = StringTools.getRandomNumber(Constants.LENGTH_30);
+		if(!StringTools.isEmpty(callbackUrl)){
+			session.setAttribute(state, callbackUrl);
+		}
+		String url = String.format(appConfig.getQqUrlAuthorization(),appConfig.getQqAppId(), URLEncoder.encode(appConfig.getQqUrlRedirect(),"UTF-8"),state);
+		return getSuccessResponseVO(url);
+	}
+
+	@PostMapping("/qqlogin/callback")
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
+	private ResponseVO qqloginCallback(HttpSession session,@VerifyParam(required = true) String code,@VerifyParam(required = true)String state){
+		SessionWebUserDto sessionWebUserDto =userInfoService.qqLogin(code);
+		session.setAttribute(Constants.SESSION_KEY, sessionWebUserDto);
+		Map<String,Object> result =  new HashMap<String,Object>();
+		result.put("callbackUrl",session.getAttribute(state));
+		result.put("userInfo",sessionWebUserDto);
+		return getSuccessResponseVO(result);
+	}
+
+
 
 }

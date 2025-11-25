@@ -16,5 +16,8 @@ public class Constants {
     public static final Integer REDIS_KEY_EXPIRES_DAY = 60*60*24;
     public static final Integer LENGTH_15 = 15;
     public static final Integer LENGTH_10 = 10;
+    public static final Integer LENGTH_30 = 30;
     public static final Long MB = 1024*1024L;
+    public static final String VIEW_OBJ_RESULT_KEY = "result";
+    public static final Integer LENGTH_20 = 20;
 }
