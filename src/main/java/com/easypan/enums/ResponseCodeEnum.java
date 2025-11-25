@@ -13,7 +13,8 @@ public enum ResponseCodeEnum {
 	CODE_601(601, "请求参数错误"),
 	CODE_602(602, "数据已存在"),
 	CODE_500(500, "服务器返回错误，请联系管理员"),
-	CODE_901(901,"登录超时，请重新登录");
+	CODE_901(901,"登录超时，请重新登录"),
+	CODE_904(904,"网盘空间不足，请扩容");
 
 	private Integer code;
 

@@ -461,6 +461,9 @@
 		<include refid="base_column_list"/> 
 		from file_info where file_id =#{fileId} and user_id =#{userId}
 	</select>
+	<select id="selectUseSpaceByUserId" resultType="java.lang.Long">
+		select ifnull(sum(file_size),0) from file_info where user_id = #{userId}
+	</select>
 
 	<!-- 根据 FileIdAndUserId 更新 -->
 	<update id="updateByFileIdAndUserId" parameterType="com.easypan.entity.po.FileInfo">

@@ -3,7 +3,11 @@ package com.easypan.entity.query;
 import java.util.Date;
 
 
-
+/**
+ * @Description: 文件信息
+ * @Author: false
+ * @Date: 2025/07/25 20:22:51
+ */
 public class FileInfoQuery extends BaseQuery {
 	/**
  	 * 文件id 查询对象

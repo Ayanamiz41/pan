@@ -69,4 +69,13 @@ public interface UserInfoMapper<T, P> extends BaseMapper {
  	 */
 	Integer deleteByQqOpenId(@Param("qqOpenId")String qqOpenId);
 
+	/**
+	 * 根据userId更新用户使用空间和总空间
+	 * @param userId
+	 * @param AddUseSpace
+	 * @param AddTotalSpace
+	 * @return
+	 */
+	Integer updateUserSpace(@Param("userId") String userId,@Param("AddUseSpace") Long AddUseSpace,@Param("AddTotalSpace") Long AddTotalSpace);
+
 }

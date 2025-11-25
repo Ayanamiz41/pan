@@ -20,6 +20,7 @@ import com.easypan.entity.query.SimplePage;
 import com.easypan.enums.PageSize;
 import com.easypan.enums.UserStatusEnum;
 import com.easypan.exception.BusinessException;
+import com.easypan.mappers.FileInfoMapper;
 import com.easypan.mappers.UserInfoMapper;
 import com.easypan.service.EmailCodeService;
 import com.easypan.service.UserInfoService;
@@ -55,6 +56,8 @@ public class UserInfoServiceImpl implements UserInfoService{
 	private RedisComponent  redisComponent;
 	@Autowired
 	private AppConfig appConfig;
+	@Autowired
+	private FileInfoMapper fileInfoMapper;
 
 	private static final Logger logger = LoggerFactory.getLogger(UserInfoServiceImpl.class);
 
@@ -287,8 +290,8 @@ public class UserInfoServiceImpl implements UserInfoService{
 		// 创建用户空间信息对象，并设置总空间和已用空间
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
 		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
-		//TODO 查询当前用户已经上传文件大小总和
-		userSpaceDto.setUseSpace(userInfo.getUseSpace());
+		Long useSpace = fileInfoMapper.selectUseSpaceByUserId(userInfo.getUserId());
+		userSpaceDto.setUseSpace(useSpace);
 
 		// 将用户空间信息保存到 Redis 中（用于快速读取和缓存）
 		redisComponent.saveUserSpace(userInfo.getUserId(), userSpaceDto);
@@ -365,8 +368,8 @@ public class UserInfoServiceImpl implements UserInfoService{
 		}
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
 		userSpaceDto.setTotalSpace(user.getTotalSpace());
-		//TODO 获取用户已使用的空间
-		userSpaceDto.setUseSpace(user.getUseSpace());
+		Long useSpace = fileInfoMapper.selectUseSpaceByUserId(user.getUserId());
+		userSpaceDto.setUseSpace(useSpace);
 		redisComponent.saveUserSpace(user.getUserId(), userSpaceDto);
 		return sessionWebUserDto;
 	}

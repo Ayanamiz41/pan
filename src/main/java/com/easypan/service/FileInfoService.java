@@ -2,10 +2,19 @@ package com.easypan.service;
 
 
 import java.util.List;
+
+import com.easypan.entity.dto.SessionWebUserDto;
+import com.easypan.entity.dto.UploadResultDto;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.query.FileInfoQuery;
+import org.springframework.web.multipart.MultipartFile;
 
+/**
+ * @Description: 文件信息 Service
+ * @Author: false
+ * @Date: 2025/07/25 20:22:51
+ */
 public interface FileInfoService{
 
 	/**
@@ -52,4 +61,19 @@ public interface FileInfoService{
  	 * 根据 FileIdAndUserId 删除
  	 */
 	Integer deleteFileInfoByFileIdAndUserId(String fileId, String userId);
+
+	/**
+	 * 上传文件
+	 * @param sessionWebUserDto
+	 * @param fileId
+	 * @param file
+	 * @param fileName
+	 * @param filePid
+	 * @param fileMd5
+	 * @param chunkIndex
+	 * @param chunks
+	 * @return
+	 */
+	UploadResultDto uploadFile(SessionWebUserDto sessionWebUserDto, String fileId, MultipartFile file, String fileName, String filePid, String fileMd5, Integer chunkIndex, Integer chunks);
+
 }

@@ -542,7 +542,26 @@
 		where qq_open_id =#{qqOpenId}
 	</update>
 
-	<!-- 根据 QqOpenId 删除 -->
+    <update id="updateUserSpace">
+		update user_info
+		<set>
+			<if test="AddUseSpace!=null">
+				use_space = use_space + #{AddUseSpace},
+			</if>
+			<if test="AddTotalSpace!=null">
+				total_space = total_space + #{AddTotalSpace},
+			</if>
+		</set>
+		where user_id = #{userId}
+		<if test="AddUseSpace!=null">
+			and <![CDATA[ (use_space+#{AddUseSpace})<=total_space]]>
+		</if>
+		<if test="AddTotalSpace!=null">
+			and<![CDATA[ (total_space+#{AddTotalSpace})>=use_space]]>
+		</if>
+	</update>
+
+    <!-- 根据 QqOpenId 删除 -->
 	<delete id="deleteByQqOpenId">
 		delete from user_info where qq_open_id =#{qqOpenId}
 	</delete>

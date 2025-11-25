@@ -1,5 +1,6 @@
 package com.easypan.utils;
 
+import com.easypan.entity.constants.Constants;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.RandomStringUtils;
 
@@ -39,5 +40,27 @@ public class StringTools {
             return false;
         }
         return true;
+    }
+
+    public static String rename(String fileName){
+        String fileNameReal = getFileNameNoSuffix(fileName);
+        String fileSuffix = getFileSuffix(fileName);
+        return fileNameReal + "_" + getRandomNumber(Constants.LENGTH_5) + fileSuffix;
+    }
+
+    public static String getFileNameNoSuffix(String fileName){
+        Integer index = fileName.lastIndexOf(".");
+        if(index==-1){
+            return fileName;
+        }
+        return fileName.substring(0,index);
+    }
+
+    public static String getFileSuffix(String fileName){
+        Integer index = fileName.lastIndexOf(".");
+        if(index==-1){
+            return "";
+        }
+        return fileName.substring(index);
     }
 }
