@@ -110,4 +110,6 @@ public interface FileInfoService{
 	 * @param filePid
 	 */
 	void changeFileFolder(String userId,String fileIds,String filePid);
+
+
 }

@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 import java.util.List;
@@ -137,6 +138,20 @@ public class FileInfoController extends CommonFileController{
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
 		fileInfoService.changeFileFolder(sessionWebUserDto.getUserId(),fileIds,filePid);
 		return getSuccessResponseVO(null);
+	}
+
+	@RequestMapping("/createDownloadUrl/{fileId}")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO createDownloadUrl(HttpSession session,@VerifyParam(required = true)@PathVariable String fileId){
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		return super.createDownloadUrl(fileId,sessionWebUserDto.getUserId());
+	}
+
+	@GetMapping("/download/{code}")
+	@GlobalInterceptor(checkParams = true,checkLogin = false)
+	public void download(HttpServletRequest request,HttpServletResponse response,
+							   @VerifyParam(required = true)@PathVariable String code)throws Exception{
+		super.download(request,response,code);
 	}
 
 }

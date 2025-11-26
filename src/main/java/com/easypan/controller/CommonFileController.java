@@ -1,21 +1,27 @@
 package com.easypan.controller;
 
+import com.easypan.component.RedisComponent;
 import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
+import com.easypan.entity.dto.DownloadFileDto;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.query.FileInfoQuery;
 import com.easypan.entity.vo.FileInfoVO;
 import com.easypan.entity.vo.ResponseVO;
 import com.easypan.enums.FileCatogoryEnum;
 import com.easypan.enums.FileFolderTypeEnum;
+import com.easypan.enums.ResponseCodeEnum;
+import com.easypan.exception.BusinessException;
 import com.easypan.service.FileInfoService;
 import com.easypan.utils.CopyTools;
 import com.easypan.utils.StringTools;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.net.URLEncoder;
 import java.util.List;
 
 public class CommonFileController extends ABaseController{
@@ -23,6 +29,8 @@ public class CommonFileController extends ABaseController{
     private AppConfig appConfig;
     @Autowired
     private FileInfoService fileInfoService;
+    @Autowired
+    private RedisComponent  redisComponent;
 
     /**
      * 获取图片文件并通过响应流输出到客户端浏览器
@@ -127,6 +135,71 @@ public class CommonFileController extends ABaseController{
 
         // 返回查询结果（包装成统一响应结构）
         return getSuccessResponseVO(CopyTools.copyList(fileInfoList, FileInfoVO.class));
+    }
+
+    // 创建一个用于下载的URL code（验证码），并将文件信息暂存到Redis中，供后续下载接口使用
+    protected ResponseVO createDownloadUrl(String fileId,String userId){
+        // 根据 fileId 和 userId 从数据库中查出对应的文件信息
+        FileInfo fileInfo = fileInfoService.getFileInfoByFileIdAndUserId(fileId, userId);
+
+        // 若查不到这个文件，或该用户无权限，则抛出业务异常
+        if(fileInfo == null){
+            throw new BusinessException(ResponseCodeEnum.CODE_600);
+        }
+
+        // 判断该 fileInfo 是否是“文件夹”类型，如果是，则也禁止下载，抛异常
+        if(FileFolderTypeEnum.FOLDER.getType().equals(fileInfo.getFolderType())){
+            throw new BusinessException(ResponseCodeEnum.CODE_600);
+        }
+
+        // 生成一个随机的50位下载验证码，作为临时下载凭证
+        String code = StringTools.getRandomString(Constants.LENGTH_50);
+
+        // 构造下载所需的 DTO，封装文件名、路径和下载验证码
+        DownloadFileDto downloadFileDto = new DownloadFileDto();
+        downloadFileDto.setFileName(fileInfo.getFileName());
+        downloadFileDto.setFilePath(fileInfo.getFilePath());
+        downloadFileDto.setDownloadCode(code);
+
+        // 把该下载信息保存到 Redis 中，key 是 code，值是 downloadFileDto，供稍后下载使用
+        redisComponent.saveDownloadCode(downloadFileDto);
+        // 返回响应给前端，包含成功状态和该下载 code
+        return getSuccessResponseVO(code);
+    }
+
+    // 下载接口，通过传入的 code 去 Redis 中查找文件信息，然后写入响应流，实现文件下载
+    protected void download(HttpServletRequest request,HttpServletResponse response,String code)throws Exception {
+        // 根据下载 code 从 Redis 获取对应的文件下载信息
+        DownloadFileDto downloadFileDto = redisComponent.getDownloadDto(code);
+
+        // 如果 Redis 中没有该 code（说明 code 失效或错误），直接返回，不进行任何下载
+        if(downloadFileDto == null){
+            return;
+        }
+
+        // 构造完整的文件系统路径，用于后续从磁盘读取文件（注意：filePath 是相对路径）
+        String filePath = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE + "/" +downloadFileDto.getFilePath();
+
+        // 获取原始文件名
+        String fileName = downloadFileDto.getFileName();
+
+        // 设置响应头的内容类型为下载类型，防止浏览器直接打开
+        response.setContentType("application/x-msdownload;charset=utf-8");
+
+        // 判断是否是 IE 浏览器（msie），IE 对文件名编码要求不同
+        if(request.getHeader("User-Agent").toLowerCase().indexOf("msie") >0){
+            // IE 下使用 URLEncoder 进行 utf-8 编码
+            fileName = URLEncoder.encode(fileName, "utf-8");
+        }else{
+            // 非 IE 浏览器下，用 ISO8859-1 重新编码，防止中文乱码
+            fileName = new String(fileName.getBytes("UTF-8"), "ISO8859-1");
+        }
+
+        // 设置 Content-Disposition 头，告诉浏览器“这是个附件”，触发下载，并设置文件名
+        response.setHeader("Content-Disposition", "attachment;filename=\"" + fileName + "\"");
+
+        // 调用工具方法，将磁盘文件内容读入并写入 response 输出流，完成下载
+        readFile(response, filePath);
     }
 
 
