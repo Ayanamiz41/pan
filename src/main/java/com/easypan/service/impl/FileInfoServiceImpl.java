@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.easypan.component.RedisComponent;
 import com.easypan.entity.config.AppConfig;
@@ -295,6 +298,105 @@ public class FileInfoServiceImpl implements FileInfoService{
 		fileInfoMapper.insert(fileInfo);
 		return fileInfo;
 	}
+
+
+	public FileInfo rename(String fileId, String userId, String newName) {
+		FileInfo fileInfo = fileInfoMapper.selectByFileIdAndUserId(fileId, userId);
+		if (fileInfo == null) {
+			throw new BusinessException("文件不存在");
+		}
+		String filePid = fileInfo.getFilePid();
+		if (fileInfo.getFolderType().equals(FileFolderTypeEnum.FILE.getType())) {
+			newName = newName + StringTools.getFileSuffix(fileInfo.getFileName());
+		}
+		checkFileName(filePid, userId, newName, fileInfo.getFolderType());
+		Date curDate = new Date();
+		FileInfo updateFileInfo = new FileInfo();
+		updateFileInfo.setFileName(newName);
+		updateFileInfo.setLastUpdateTime(curDate);
+		fileInfoMapper.updateByFileIdAndUserId(updateFileInfo, fileId, userId);
+		fileInfo.setFileName(newName);
+		fileInfo.setLastUpdateTime(curDate);
+		return fileInfo;
+	}
+
+	public List<FileInfo> loadAllFolder(String userId, String filePid, String currentFolderIds) {
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setFolderType(FileFolderTypeEnum.FOLDER.getType());
+		if(!StringTools.isEmpty(currentFolderIds)){
+			fileInfoQuery.setExcludeFileIdArray(currentFolderIds.split(","));
+		}
+		fileInfoQuery.setOrderBy("create_time desc");
+		fileInfoQuery.setDelFlag(FileDelFlagEnum.USING.getFlag());
+		fileInfoQuery.setStatus(FileStatusEnum.USING.getStatus());
+		return fileInfoMapper.selectList(fileInfoQuery);
+	}
+
+	/**
+	 * 批量修改文件（或文件夹）所在目录。
+	 * 若有重名文件将自动重命名，支持事务回滚。
+	 *
+	 * @param userId 操作用户ID
+	 * @param fileIds 要移动的文件ID，多个以英文逗号分隔
+	 * @param filePid 目标文件夹ID（可为"0"表示根目录）
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void changeFileFolder(String userId, String fileIds, String filePid) {
+		// 若目标目录和源文件相同，直接抛异常（不能把文件移动到自己下面）
+		if(fileIds.equals(filePid)){
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+
+		// 如果目标不是根目录，校验该目录是否存在且未被删除
+		if(!Constants.ZERO_STR.equals(filePid)){
+			FileInfo fileInfo = fileInfoMapper.selectByFileIdAndUserId(filePid, userId);
+			if (fileInfo == null || !fileInfo.getDelFlag().equals(FileDelFlagEnum.USING.getFlag())) {
+				throw new BusinessException(ResponseCodeEnum.CODE_600);
+			}
+		}
+
+		// 拆分多个文件ID
+		String[] fileIdArray = fileIds.split(",");
+
+		// 查询目标目录下已有的文件列表，用于后续重名检测
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setFilePid(filePid);
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+
+		// 将目标目录中的文件按名称映射，用于快速判断是否重名
+		Map<String, FileInfo> fileInfoMap = fileInfoList.stream()
+				.collect(Collectors.toMap(FileInfo::getFileName, Function.identity(), (o1, o2) -> o1));
+
+		// 查询用户选中的源文件信息
+		fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setFileIdArray(fileIdArray);
+		List<FileInfo> selectedFileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+
+		// 遍历每一个需要移动的文件
+		for(FileInfo item : selectedFileInfoList){
+			// 检查新目录中是否已有重名文件
+			FileInfo rootFileInfo = fileInfoMap.get(item.getFileName());
+
+			// 构建更新对象
+			FileInfo updateFileInfo = new FileInfo();
+			updateFileInfo.setFilePid(filePid); // 设置新目录
+			updateFileInfo.setLastUpdateTime(new Date()); // 更新时间
+
+			// 若存在重名，则重命名该文件
+			if(rootFileInfo != null){
+				String newName = StringTools.rename(item.getFileName());
+				updateFileInfo.setFileName(newName);
+			}
+
+			// 更新数据库中该文件的目录信息
+			fileInfoMapper.updateByFileIdAndUserId(updateFileInfo, item.getFileId(), userId);
+		}
+	}
+
 
 	private void checkFileName(String filePid,String userId,String fileName,Integer folderType){
 		FileInfoQuery fileInfoQuery = new FileInfoQuery();

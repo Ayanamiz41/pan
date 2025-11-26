@@ -1,10 +1,6 @@
 package com.easypan.entity.vo;
 
-/**
- * @Description:
- * @Author: KunSpireUp
- * @Date: 3/27/2024 12:35 AM
- */
+
 public class ResponseVO<T> {
 
 	private String status;

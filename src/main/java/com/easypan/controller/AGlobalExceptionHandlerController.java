@@ -15,11 +15,7 @@ import javax.servlet.http.HttpServletRequest;
 
 import java.net.BindException;
 
-/**
- * @Description: 全局异常处理
- * @Author: KunSpireUp
- * @Date: 3/27/2024 12:52 AM
- */
+
 @RestControllerAdvice  // 标记为全局异常处理类，自动捕获控制器层抛出的异常，并返回 JSON 格式响应
 public class AGlobalExceptionHandlerController extends ABaseController{
 

@@ -3,11 +3,7 @@ package com.easypan.entity.vo;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * @Description: 分页数据
- * @Author: KunSpireUp
- * @Date: 3/26/2024 12:40 AM
- */
+
 public class PaginationResultVO<T> {
 	private Integer totalCount;
 	private Integer pageSize;

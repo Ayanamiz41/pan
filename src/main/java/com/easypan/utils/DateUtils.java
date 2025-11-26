@@ -5,10 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * @Description: 时间工具类
- * @Author: KunSpireUp
- */
+
 public class DateUtils {
 
     private static final Object lookObj = new Object();

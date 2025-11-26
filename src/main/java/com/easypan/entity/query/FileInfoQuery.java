@@ -119,4 +119,9 @@ public class FileInfoQuery extends BaseQuery {
 	 */
 	private String[] fileIdArray;
 
+	/**
+	 * 排除的文件id数组
+	 */
+	private String[] excludeFileIdArray;
+
 }

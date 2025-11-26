@@ -1,8 +1,6 @@
 package com.easypan.controller;
 
 
-import java.util.List;
-
 import com.easypan.annotation.GlobalInterceptor;
 import com.easypan.annotation.VerifyParam;
 import com.easypan.entity.dto.SessionWebUserDto;
@@ -15,13 +13,15 @@ import com.easypan.service.FileInfoService;
 import com.easypan.entity.vo.ResponseVO;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.query.FileInfoQuery;
+import com.easypan.utils.CopyTools;
+import org.apache.ibatis.annotations.Param;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
-import javax.mail.Multipart;
 import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 /**
  * @Description: 文件信息 Controller
@@ -98,7 +98,7 @@ public class FileInfoController extends CommonFileController{
 						  	@VerifyParam(required = true) String fileName) {
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
    		FileInfo fileInfo = fileInfoService.newFolder(filePid,sessionWebUserDto.getUserId(),fileName);
-		return getSuccessResponseVO(fileInfo);
+		return getSuccessResponseVO(CopyTools.copy(fileInfo,FileInfoVO.class));
 	}
 
 	@RequestMapping("/getFolderInfo")
@@ -109,5 +109,34 @@ public class FileInfoController extends CommonFileController{
 		return super.getFolderInfo(path,sessionWebUserDto.getUserId());
 	}
 
+	@PostMapping("/rename")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO rename(HttpSession session,
+							 @VerifyParam(required = true)String fileId,
+							 @VerifyParam(required = true)@RequestParam("fileName") String newName){
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		FileInfo fileInfo = fileInfoService.rename(fileId,sessionWebUserDto.getUserId(),newName);
+		return getSuccessResponseVO(CopyTools.copy(fileInfo,FileInfoVO.class));
+	}
+
+	@RequestMapping("/loadAllFolder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO loadAllFolder(HttpSession session,
+									@VerifyParam(required = true)String filePid,
+									@RequestParam("currentFileIds") String currentFolderIds){
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		List<FileInfo> fileInfoList = fileInfoService.loadAllFolder(sessionWebUserDto.getUserId(),filePid,currentFolderIds);
+		return getSuccessResponseVO((CopyTools.copyList(fileInfoList,FileInfoVO.class)));
+	}
+
+	@RequestMapping("/changeFileFolder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO changeFileFolder(HttpSession session,
+									   @VerifyParam(required = true)String fileIds,
+									   @VerifyParam(required = true)String filePid){
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		fileInfoService.changeFileFolder(sessionWebUserDto.getUserId(),fileIds,filePid);
+		return getSuccessResponseVO(null);
+	}
 
 }

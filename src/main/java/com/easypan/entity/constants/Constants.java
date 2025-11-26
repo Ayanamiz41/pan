@@ -14,6 +14,7 @@ public class Constants {
     public static final String M3U8_NAME = "index.m3u8";
     public static final Integer LENGTH_5 = 5;
     public static final Integer ZERO = 0;
+    public static final String ZERO_STR = "0";
     public static final String REDIS_KEY_SYS_SETTING = "easypan:syssetting:";
     public static final String REDIS_KEY_USER_SPACE = "easypan:userspace:";
     public static final String REDIS_KEY_USER_FILE_TEMP_SIZE = "easypan:user:file:temp:";

@@ -84,4 +84,30 @@ public interface FileInfoService{
 	 * @return
 	 */
 	FileInfo newFolder(String filePid,String userId,String folderName);
+
+	/**
+	 * 文件重命名
+	 * @param fileId
+	 * @param userId
+	 * @param newName
+	 * @return
+	 */
+	FileInfo rename(String fileId,String userId,String newName);
+
+	/**
+	 * 加载所有文件夹
+	 * @param userId
+	 * @param filePid
+	 * @param currentFolderIds
+	 * @return
+	 */
+	List<FileInfo> loadAllFolder(String userId,String filePid,String currentFolderIds);
+
+	/**
+	 * 移动文件和文件夹
+	 * @param userId
+	 * @param fileIds
+	 * @param filePid
+	 */
+	void changeFileFolder(String userId,String fileIds,String filePid);
 }

@@ -4,10 +4,12 @@ import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.query.FileInfoQuery;
+import com.easypan.entity.vo.FileInfoVO;
 import com.easypan.entity.vo.ResponseVO;
 import com.easypan.enums.FileCatogoryEnum;
 import com.easypan.enums.FileFolderTypeEnum;
 import com.easypan.service.FileInfoService;
+import com.easypan.utils.CopyTools;
 import com.easypan.utils.StringTools;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,7 +126,7 @@ public class CommonFileController extends ABaseController{
         List<FileInfo> fileInfoList = fileInfoService.findListByParam(fileInfoQuery);
 
         // 返回查询结果（包装成统一响应结构）
-        return getSuccessResponseVO(fileInfoList);
+        return getSuccessResponseVO(CopyTools.copyList(fileInfoList, FileInfoVO.class));
     }
 
 

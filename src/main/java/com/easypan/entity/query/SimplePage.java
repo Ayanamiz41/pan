@@ -2,11 +2,7 @@ package com.easypan.entity.query;
 
 import com.easypan.enums.PageSize;;
 
-/**
- * @Description: 基础分页类
- * @Author: KunSpireUp
- * @Date: 16/03/2024 22:18
- */
+
 
 public class SimplePage {
 
