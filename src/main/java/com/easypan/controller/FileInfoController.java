@@ -20,6 +20,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.mail.Multipart;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 /**
@@ -29,7 +30,7 @@ import javax.servlet.http.HttpSession;
  */
 @RestController
 @RequestMapping("/file")
-public class FileInfoController extends ABaseController{
+public class FileInfoController extends CommonFileController{
 
 	@Resource
 	private FileInfoService fileInfoService;
@@ -68,6 +69,12 @@ public class FileInfoController extends ABaseController{
 		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
 		UploadResultDto uploadResultDto = fileInfoService.uploadFile(sessionWebUserDto,fileId,file,fileName,filePid,fileMd5,chunkIndex,chunks);
 		return getSuccessResponseVO(uploadResultDto);
+	}
+
+	@GetMapping("/getImage/{imageFolder}/{imageName}")
+	@GlobalInterceptor(checkParams = true)
+	public void getImage(HttpServletResponse response,@PathVariable("imageFolder") String imageFolder,@PathVariable("imageName") String imageName) {
+		super.getImage(response, imageFolder, imageName);
 	}
 
 }
