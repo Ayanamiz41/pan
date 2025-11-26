@@ -1,9 +1,9 @@
 package com.easypan.enums;
 
 public enum UploadStatusEnum {
-    UPLOAD_INSTANT("upload_instant","秒传"),
+    UPLOAD_SECONDS("upload_seconds","秒传"),
     UPLOADING("uploading","上传中"),
-    UPLOAD_COMPLETED("upload_completed","上传完成");
+    UPLOAD_FINISH("upload_finish","上传完成");
 
     private String code;
     private String desc;

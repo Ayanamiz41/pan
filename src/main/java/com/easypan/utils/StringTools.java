@@ -14,6 +14,10 @@ public class StringTools {
         return RandomStringUtils.random(count,false,true);
     }
 
+    public static final String getRandomString(Integer count){
+        return RandomStringUtils.random(count,true,true);
+    }
+
     /**
      * 校验是否位空
      * @param str
@@ -45,7 +49,7 @@ public class StringTools {
     public static String rename(String fileName){
         String fileNameReal = getFileNameNoSuffix(fileName);
         String fileSuffix = getFileSuffix(fileName);
-        return fileNameReal + "_" + getRandomNumber(Constants.LENGTH_5) + fileSuffix;
+        return fileNameReal + "_" + getRandomString(Constants.LENGTH_5) + fileSuffix;
     }
 
     public static String getFileNameNoSuffix(String fileName){

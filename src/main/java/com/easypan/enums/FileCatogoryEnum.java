@@ -1,7 +1,5 @@
 package com.easypan.enums;
 
-import lombok.Data;
-
 public enum FileCatogoryEnum {
     VIDEO(1,"video","视频"),
     AUDIO(2,"audio","音频"),

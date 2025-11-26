@@ -193,7 +193,7 @@ public class AccountController extends ABaseController{
 		}
 
 		// 构造用户头像路径：例如 /projectRoot/file/avatar/123.jpg
-		String avatarPath = appConfig.getProjectFolder() + avatarFolderName + userId + Constants.AVATAR_SUFFIX;
+		String avatarPath = appConfig.getProjectFolder() + avatarFolderName  +"/"+ userId + Constants.AVATAR_SUFFIX;
 		File file = new File(avatarPath);
 
 		// 判断用户头像是否存在

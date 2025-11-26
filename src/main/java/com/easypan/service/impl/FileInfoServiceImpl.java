@@ -2,10 +2,13 @@ package com.easypan.service.impl;
 
 
 import java.io.File;
+import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.util.Date;
 import java.util.List;
 
 import com.easypan.component.RedisComponent;
+import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
 import com.easypan.entity.dto.SessionWebUserDto;
 import com.easypan.entity.dto.UploadResultDto;
@@ -21,10 +24,20 @@ import com.easypan.service.FileInfoService;
 import com.easypan.entity.vo.PaginationResultVO;
 import com.easypan.entity.po.FileInfo;
 import com.easypan.entity.query.FileInfoQuery;
+import com.easypan.utils.DateUtils;
+import com.easypan.utils.ProcessUtils;
+import com.easypan.utils.ScaleFilter;
 import com.easypan.utils.StringTools;
+import org.apache.commons.io.FileUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
@@ -42,6 +55,13 @@ public class FileInfoServiceImpl implements FileInfoService{
 	private RedisComponent redisComponent;
 	@Autowired
 	private UserInfoMapper<UserInfo, UserInfoQuery> userInfoMapper;
+	@Autowired
+	private AppConfig  appConfig;
+	@Autowired
+	@Lazy
+	private FileInfoServiceImpl  fileInfoServiceImpl;
+
+	private static final Logger logger = LoggerFactory.getLogger(FileInfoServiceImpl.class);
 
 	/**
  	 * 根据条件查询列表
@@ -137,40 +157,117 @@ public class FileInfoServiceImpl implements FileInfoService{
 	@Transactional(rollbackFor = Exception.class)
 	public UploadResultDto uploadFile(SessionWebUserDto sessionWebUserDto, String fileId, MultipartFile file, String fileName, String filePid, String fileMd5, Integer chunkIndex, Integer chunks) {
 		UploadResultDto  resultDto = new UploadResultDto();
-		if(StringTools.isEmpty(fileId)){
-			fileId = StringTools.getRandomNumber(Constants.LENGTH_10);
-		}
-		resultDto.setFileId(fileId);
-		Date curDate = new Date();
-		UserSpaceDto userSpaceDto = redisComponent.getUserSpace(sessionWebUserDto.getUserId());
-		if(chunkIndex == 0){
-			FileInfoQuery fileInfoQuery = new FileInfoQuery();
-			fileInfoQuery.setFileMd5(fileMd5);
-			fileInfoQuery.setSimplePage(new SimplePage());
-			fileInfoQuery.setStatus(FileStatusEnum.TRANSCODING_COMPLETED.getStatus());
-			List<FileInfo> fileList = fileInfoMapper.selectList(fileInfoQuery);
-			if(!fileList.isEmpty()){
-				//秒传
-				FileInfo fileInfo = fileList.get(0);
-				//判断文件大小
-				if(fileInfo.getFileSize()+userSpaceDto.getUseSpace()>userSpaceDto.getTotalSpace()){
-					throw new BusinessException(ResponseCodeEnum.CODE_904);
+		File tempFileFolder = null;
+		Boolean uploadSuccess = true;
+		try{
+			if(StringTools.isEmpty(fileId)){
+				fileId = StringTools.getRandomString(Constants.LENGTH_10);
+			}
+			resultDto.setFileId(fileId);
+			Date curDate = new Date();
+			UserSpaceDto userSpaceDto = redisComponent.getUserSpace(sessionWebUserDto.getUserId());
+			if(chunkIndex == 0){
+				FileInfoQuery fileInfoQuery = new FileInfoQuery();
+				fileInfoQuery.setFileMd5(fileMd5);
+				fileInfoQuery.setSimplePage(new SimplePage(0,1));
+				fileInfoQuery.setStatus(FileStatusEnum.TRANSCODING_COMPLETED.getStatus());
+				List<FileInfo> fileList = fileInfoMapper.selectList(fileInfoQuery);
+				if(!fileList.isEmpty()){
+					//秒传
+					FileInfo fileInfo = fileList.get(0);
+					//判断文件大小
+					if(fileInfo.getFileSize()+userSpaceDto.getUseSpace()>userSpaceDto.getTotalSpace()){
+						throw new BusinessException(ResponseCodeEnum.CODE_904);
+					}
+					fileInfo.setFileId(fileId);
+					fileInfo.setFilePid(filePid);
+					fileInfo.setUserId(sessionWebUserDto.getUserId());
+					fileInfo.setCreateTime(curDate);
+					fileInfo.setLastUpdateTime(curDate);
+					fileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
+					//文件重命名
+					fileName = autoRename(filePid,sessionWebUserDto.getUserId(),fileName);
+					fileInfo.setFileName(fileName);
+					fileInfoMapper.insert(fileInfo);
+					//更新用户使用空间
+					updateUserSpace(sessionWebUserDto,fileInfo.getFileSize());
+					resultDto.setStatus(UploadStatusEnum.UPLOAD_SECONDS.getCode());
+					return resultDto;
 				}
-				fileInfo.setFileId(fileId);
-				fileInfo.setFilePid(filePid);
-				fileInfo.setUserId(sessionWebUserDto.getUserId());
-				fileInfo.setCreateTime(curDate);
-				fileInfo.setLastUpdateTime(curDate);
-				fileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
-				//文件重命名
-				fileName = autoRename(filePid,sessionWebUserDto.getUserId(),fileName);
-				fileInfo.setFileName(fileName);
-				fileInfoMapper.insert(fileInfo);
-				//更新用户使用空间
-				updateUserSpace(sessionWebUserDto,fileInfo.getFileSize());
-				resultDto.setStatus(UploadStatusEnum.UPLOAD_INSTANT.getCode());
+			}
+			//判断用户空间是否够
+			Long currentTempSize = redisComponent.getFileTempSize(sessionWebUserDto.getUserId(),fileId);
+			if(file.getSize()+currentTempSize+userSpaceDto.getUseSpace()>userSpaceDto.getTotalSpace()){
+				throw new BusinessException(ResponseCodeEnum.CODE_904);
+			}
+
+			//暂存临时目录
+			String tempFolderName = appConfig.getProjectFolder()+Constants.FILE_FOLDER_TEMP;
+			//当前用户上传文件的文件夹名
+			String currentUserFolderName = sessionWebUserDto.getUserId()+fileId;
+			//打开这个文件夹
+			tempFileFolder = new File(tempFolderName +"/"+ currentUserFolderName);
+			if(!tempFileFolder.exists()){
+				tempFileFolder.mkdirs();
+			}
+			//文件分片
+			File newFile = new File(tempFileFolder.getPath()+"/"+chunkIndex);
+			file.transferTo(newFile);
+			redisComponent.saveFileTempSize(sessionWebUserDto.getUserId(),fileId,file.getSize());
+			//还没有上传到最后一个分片
+			if(chunkIndex<chunks-1){
+				resultDto.setStatus(UploadStatusEnum.UPLOADING.getCode());
 				return resultDto;
 			}
+			//最后一个分片上传完成，记录到数据库，异步合并分片
+			String month = DateUtils.format(new Date(),DateTimePatternEnum.YYYYMM.getPattern());
+			String fileSuffix = StringTools.getFileSuffix(fileName);
+			String realFileName = currentUserFolderName + fileSuffix;
+			FileTypeEnum fileTypeEnum = FileTypeEnum.getFileTypeBySuffix(fileSuffix);
+			fileName = autoRename(filePid,sessionWebUserDto.getUserId(),fileName);
+			FileInfo  fileInfo = new FileInfo();
+			fileInfo.setFileId(fileId);
+			fileInfo.setUserId(sessionWebUserDto.getUserId());
+			fileInfo.setFileMd5(fileMd5);
+			fileInfo.setFileName(fileName);
+			fileInfo.setFilePath(month+"/"+realFileName);
+			fileInfo.setFilePid(filePid);
+			fileInfo.setCreateTime(curDate);
+			fileInfo.setLastUpdateTime(curDate);
+			fileInfo.setFileCategory(fileTypeEnum.getCategory().getCategory());
+			fileInfo.setFileType(fileTypeEnum.getType());
+			fileInfo.setStatus(FileStatusEnum.TRANSCODING.getStatus());
+			fileInfo.setFolderType(FileFolderTypeEnum.FILE.getType());
+			fileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
+			Long totalSize = redisComponent.getFileTempSize(sessionWebUserDto.getUserId(),fileId);
+			fileInfoMapper.insert(fileInfo);
+			updateUserSpace(sessionWebUserDto,totalSize);
+			resultDto.setStatus(UploadStatusEnum.UPLOAD_FINISH.getCode());
+
+			TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+				@Override
+				public void afterCommit() {
+					fileInfoServiceImpl.transcodeFile(fileInfo.getFileId(),sessionWebUserDto);
+				}
+			});
+
+			return resultDto;
+		}catch (BusinessException e){
+			logger.error("文件上传失败",e);
+			uploadSuccess = false;
+			throw e;
+		}
+		catch (Exception e) {
+			logger.error("文件上传失败",e);
+			uploadSuccess = false;
+		}finally {
+			if(!uploadSuccess&&tempFileFolder!=null){
+                try {
+                    FileUtils.deleteDirectory(tempFileFolder);
+                } catch (IOException e) {
+					logger.error("删除临时目录失败",e);
+                }
+            }
 		}
 		return resultDto;
 	}
@@ -197,4 +294,121 @@ public class FileInfoServiceImpl implements FileInfoService{
 		userSpaceDto.setUseSpace(userSpaceDto.getUseSpace()+fileSize);
 		redisComponent.saveUserSpace(sessionWebUserDto.getUserId(),userSpaceDto);
 	}
+
+	@Async
+	public void transcodeFile(String fileId, SessionWebUserDto sessionWebUserDto){
+		Boolean transcodeSuccess = true;
+		String targetFilePath = null;
+		String cover = null;
+		FileTypeEnum fileTypeEnum = null;
+		FileInfo fileInfo = fileInfoMapper.selectByFileIdAndUserId(fileId,sessionWebUserDto.getUserId());
+		try{
+			if(fileInfo==null||!FileStatusEnum.TRANSCODING.getStatus().equals(fileInfo.getStatus())){
+				return;
+			}
+			String tempFolderName = appConfig.getProjectFolder() + Constants.FILE_FOLDER_TEMP;
+			String currentUserFolderName = sessionWebUserDto.getUserId() + fileId;
+			File fileFolder = new File(tempFolderName+"/"+currentUserFolderName);
+			String fileSuffix = StringTools.getFileSuffix(fileInfo.getFileName());
+			String month = DateUtils.format(fileInfo.getCreateTime(),DateTimePatternEnum.YYYYMM.getPattern());
+			String targetFolderName = appConfig.getProjectFolder() + Constants.FILE_FOLDER_FILE;
+			File targetFolder = new File(targetFolderName+"/"+month);
+			if(!targetFolder.exists()){
+				targetFolder.mkdirs();
+			}
+			String realFileName = currentUserFolderName + fileSuffix;
+			targetFilePath = targetFolder.getPath()+"/"+realFileName;
+			mergeFileChunks(fileFolder.getPath(),targetFilePath,fileInfo.getFileName(),true);
+			fileTypeEnum = FileTypeEnum.getFileTypeBySuffix(fileSuffix);
+			if(fileTypeEnum==FileTypeEnum.VIDEO){
+				cutFile4Video(fileId,targetFilePath);
+				cover = month + "/" + currentUserFolderName + Constants.IMAGE_PNG_SUFFIX;
+				String coverPath = targetFolderName + "/" + cover;
+				ScaleFilter.createCover4Video(new File(targetFilePath),Constants.LENGTH_150,new File(coverPath));
+			}else if(fileTypeEnum==FileTypeEnum.IMAGE){
+				cover = month + "/" + realFileName.replace(".","_.");
+				String coverPath = targetFolderName + "/" + cover;
+				Boolean created = ScaleFilter.createThumbnailWidthFFmpeg(new File(targetFilePath),Constants.LENGTH_150,new File(coverPath),false);
+				if(!created){
+					FileUtils.copyFile(new File(targetFilePath),new File(coverPath));
+				}
+			}
+		} catch (Exception e) {
+			logger.error("文件转码失败，fileId:{}，userId:{}",fileId,sessionWebUserDto.getUserId(),e);
+			transcodeSuccess = false;
+		}finally {
+			FileInfo updateFileInfo = new FileInfo();
+			updateFileInfo.setFileSize(new File(targetFilePath).length());
+			updateFileInfo.setFileCover(cover);
+			updateFileInfo.setStatus(transcodeSuccess?FileStatusEnum.TRANSCODING_COMPLETED.getStatus() : FileStatusEnum.TRANSCODING_FAILED.getStatus());
+			fileInfoMapper.updateWithOldStatus(fileId,sessionWebUserDto.getUserId(),updateFileInfo,FileStatusEnum.TRANSCODING.getStatus());
+
+		}
+	}
+
+	private void mergeFileChunks(String dirPath,String toFilePath,String fileName,Boolean delSource){
+		File dir = new File(dirPath);
+		if(!dir.exists()){
+			throw new BusinessException("目录不存在");
+		}
+		File[] fileList = dir.listFiles();
+		File targetFile = new File(toFilePath);
+		RandomAccessFile writeFile = null;
+		try{
+			writeFile = new RandomAccessFile(targetFile,"rw");
+			byte[] buffer = new byte[1024*10];
+			for(int index=0;index<fileList.length;index++){
+				int len = -1;
+				File chunkFile = new File(dirPath+"/"+index);
+				RandomAccessFile readFile = null;
+				try{
+					readFile = new RandomAccessFile(chunkFile,"r");
+					while((len = readFile.read(buffer))!=-1){
+						writeFile.write(buffer,0,len);
+					}
+				} catch (Exception e) {
+					logger.error("合并分片失败",e);
+					throw new BusinessException("合并分片失败");
+				}finally {
+                    if (readFile != null) {
+                        readFile.close();
+                    }
+                }
+			}
+		} catch (Exception e) {
+			logger.error("合并文件:{}失败",fileName,e);
+			throw new BusinessException("合并文件"+fileName+"失败");
+		}finally {
+			if(writeFile!=null){
+                try {
+                    writeFile.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+			if(delSource&& dir.exists()){
+                try {
+                    FileUtils.deleteDirectory(dir);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+		}
+	}
+
+	private void cutFile4Video(String fileId,String videoFilePath){
+		File tsFolder = new File(videoFilePath.substring(0,videoFilePath.lastIndexOf(".")));
+		if(!tsFolder.exists()){
+			tsFolder.mkdirs();
+		}
+		final String CMD_TRANSFER_2_TS = "ffmpeg -y -i %s  -vcodec copy -acodec copy -bsf:v h264_mp4toannexb %s";
+		final String CMD_CUT_TS = "ffmpeg -i %s -c copy -map 0 -f segment -segment_list %s -segment_time 30 %s/%s_%%4d.ts";
+		String tsPath = tsFolder + "/" + Constants.TS_NAME;
+		String cmd = String.format(CMD_TRANSFER_2_TS,videoFilePath,tsPath);
+		ProcessUtils.executeCommand(cmd,false);
+		cmd =String.format(CMD_CUT_TS,tsPath,tsFolder.getPath()+"/"+Constants.M3U8_NAME,tsFolder.getPath(),fileId);
+		ProcessUtils.executeCommand(cmd,false);
+		new File(tsPath).delete();
+	}
+
 }
