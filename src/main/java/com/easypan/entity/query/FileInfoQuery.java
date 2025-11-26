@@ -1,5 +1,8 @@
 package com.easypan.entity.query;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.Date;
 
 
@@ -8,6 +11,8 @@ import java.util.Date;
  * @Author: false
  * @Date: 2025/07/25 20:22:51
  */
+@Setter
+@Getter
 public class FileInfoQuery extends BaseQuery {
 	/**
  	 * 文件id 查询对象
@@ -109,236 +114,9 @@ public class FileInfoQuery extends BaseQuery {
  	 */
 	private Integer delFlag;
 
+	/**
+	 * 文件id数组
+	 */
+	private String[] fileIdArray;
 
-	public void setFileId(String fileId) {
-		this.fileId = fileId;
-	}
-
-	public String getFileId() {
-		return fileId;
-	}
-
-	public void setUserId(String userId) {
-		this.userId = userId;
-	}
-
-	public String getUserId() {
-		return userId;
-	}
-
-	public void setFileMd5(String fileMd5) {
-		this.fileMd5 = fileMd5;
-	}
-
-	public String getFileMd5() {
-		return fileMd5;
-	}
-
-	public void setFilePid(String filePid) {
-		this.filePid = filePid;
-	}
-
-	public String getFilePid() {
-		return filePid;
-	}
-
-	public void setFileSize(Long fileSize) {
-		this.fileSize = fileSize;
-	}
-
-	public Long getFileSize() {
-		return fileSize;
-	}
-
-	public void setFileName(String fileName) {
-		this.fileName = fileName;
-	}
-
-	public String getFileName() {
-		return fileName;
-	}
-
-	public void setFileCover(String fileCover) {
-		this.fileCover = fileCover;
-	}
-
-	public String getFileCover() {
-		return fileCover;
-	}
-
-	public void setFilePath(String filePath) {
-		this.filePath = filePath;
-	}
-
-	public String getFilePath() {
-		return filePath;
-	}
-
-	public void setCreateTime(Date createTime) {
-		this.createTime = createTime;
-	}
-
-	public Date getCreateTime() {
-		return createTime;
-	}
-
-	public void setLastUpdateTime(Date lastUpdateTime) {
-		this.lastUpdateTime = lastUpdateTime;
-	}
-
-	public Date getLastUpdateTime() {
-		return lastUpdateTime;
-	}
-
-	public void setFolderType(Integer folderType) {
-		this.folderType = folderType;
-	}
-
-	public Integer getFolderType() {
-		return folderType;
-	}
-
-	public void setFileCategory(Integer fileCategory) {
-		this.fileCategory = fileCategory;
-	}
-
-	public Integer getFileCategory() {
-		return fileCategory;
-	}
-
-	public void setFileType(Integer fileType) {
-		this.fileType = fileType;
-	}
-
-	public Integer getFileType() {
-		return fileType;
-	}
-
-	public void setStatus(Integer status) {
-		this.status = status;
-	}
-
-	public Integer getStatus() {
-		return status;
-	}
-
-	public void setRecycleTime(Date recycleTime) {
-		this.recycleTime = recycleTime;
-	}
-
-	public Date getRecycleTime() {
-		return recycleTime;
-	}
-
-	public void setDelFlag(Integer delFlag) {
-		this.delFlag = delFlag;
-	}
-
-	public Integer getDelFlag() {
-		return delFlag;
-	}
-
-	public void setFileIdFuzzy(String fileIdFuzzy) {
-		this.fileIdFuzzy = fileIdFuzzy;
-	}
-
-	public String getFileIdFuzzy() {
-		return fileIdFuzzy;
-	}
-
-	public void setUserIdFuzzy(String userIdFuzzy) {
-		this.userIdFuzzy = userIdFuzzy;
-	}
-
-	public String getUserIdFuzzy() {
-		return userIdFuzzy;
-	}
-
-	public void setFileMd5Fuzzy(String fileMd5Fuzzy) {
-		this.fileMd5Fuzzy = fileMd5Fuzzy;
-	}
-
-	public String getFileMd5Fuzzy() {
-		return fileMd5Fuzzy;
-	}
-
-	public void setFilePidFuzzy(String filePidFuzzy) {
-		this.filePidFuzzy = filePidFuzzy;
-	}
-
-	public String getFilePidFuzzy() {
-		return filePidFuzzy;
-	}
-
-	public void setFileNameFuzzy(String fileNameFuzzy) {
-		this.fileNameFuzzy = fileNameFuzzy;
-	}
-
-	public String getFileNameFuzzy() {
-		return fileNameFuzzy;
-	}
-
-	public void setFileCoverFuzzy(String fileCoverFuzzy) {
-		this.fileCoverFuzzy = fileCoverFuzzy;
-	}
-
-	public String getFileCoverFuzzy() {
-		return fileCoverFuzzy;
-	}
-
-	public void setFilePathFuzzy(String filePathFuzzy) {
-		this.filePathFuzzy = filePathFuzzy;
-	}
-
-	public String getFilePathFuzzy() {
-		return filePathFuzzy;
-	}
-
-	public void setCreateTimeStart(String createTimeStart) {
-		this.createTimeStart = createTimeStart;
-	}
-
-	public String getCreateTimeStart() {
-		return createTimeStart;
-	}
-
-	public void setCreateTimeEnd(String createTimeEnd) {
-		this.createTimeEnd = createTimeEnd;
-	}
-
-	public String getCreateTimeEnd() {
-		return createTimeEnd;
-	}
-
-	public void setLastUpdateTimeStart(String lastUpdateTimeStart) {
-		this.lastUpdateTimeStart = lastUpdateTimeStart;
-	}
-
-	public String getLastUpdateTimeStart() {
-		return lastUpdateTimeStart;
-	}
-
-	public void setLastUpdateTimeEnd(String lastUpdateTimeEnd) {
-		this.lastUpdateTimeEnd = lastUpdateTimeEnd;
-	}
-
-	public String getLastUpdateTimeEnd() {
-		return lastUpdateTimeEnd;
-	}
-
-	public void setRecycleTimeStart(String recycleTimeStart) {
-		this.recycleTimeStart = recycleTimeStart;
-	}
-
-	public String getRecycleTimeStart() {
-		return recycleTimeStart;
-	}
-
-	public void setRecycleTimeEnd(String recycleTimeEnd) {
-		this.recycleTimeEnd = recycleTimeEnd;
-	}
-
-	public String getRecycleTimeEnd() {
-		return recycleTimeEnd;
-	}
 }

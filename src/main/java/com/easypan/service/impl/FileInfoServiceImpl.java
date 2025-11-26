@@ -173,7 +173,7 @@ public class FileInfoServiceImpl implements FileInfoService{
 				FileInfoQuery fileInfoQuery = new FileInfoQuery();
 				fileInfoQuery.setFileMd5(fileMd5);
 				fileInfoQuery.setSimplePage(new SimplePage(0,1));
-				fileInfoQuery.setStatus(FileStatusEnum.TRANSCODING_COMPLETED.getStatus());
+				fileInfoQuery.setStatus(FileStatusEnum.USING.getStatus());
 				List<FileInfo> fileList = fileInfoMapper.selectList(fileInfoQuery);
 
 				// 如果找到了同样的文件，直接插入新记录，实现秒传
@@ -279,6 +279,36 @@ public class FileInfoServiceImpl implements FileInfoService{
 	}
 
 
+	public FileInfo newFolder(String filePid, String userId, String folderName) {
+		checkFileName(filePid,userId,folderName,FileFolderTypeEnum.FOLDER.getType());
+		Date curDate = new Date();
+		FileInfo fileInfo = new FileInfo();
+		fileInfo.setFilePid(filePid);
+		fileInfo.setUserId(userId);
+		fileInfo.setFileId(StringTools.getRandomString(Constants.LENGTH_10));
+		fileInfo.setFileName(folderName);
+		fileInfo.setCreateTime(curDate);
+		fileInfo.setLastUpdateTime(curDate);
+		fileInfo.setFolderType(FileFolderTypeEnum.FOLDER.getType());
+		fileInfo.setStatus(FileStatusEnum.USING.getStatus());
+		fileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
+		fileInfoMapper.insert(fileInfo);
+		return fileInfo;
+	}
+
+	private void checkFileName(String filePid,String userId,String fileName,Integer folderType){
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(userId);
+		fileInfoQuery.setFilePid(filePid);
+		fileInfoQuery.setFolderType(folderType);
+		fileInfoQuery.setFileName(fileName);
+		Integer count = fileInfoMapper.selectCount(fileInfoQuery);
+		if(count>0){
+			throw new BusinessException("此目录下已经存在同名"+(folderType.equals(FileFolderTypeEnum.FILE.getType())?"文件":"文件夹")+"请修改名称");
+		}
+	}
+
+
 	private String autoRename(String filePid,String userId,String fileName){
 		FileInfoQuery fileInfoQuery = new FileInfoQuery();
 		fileInfoQuery.setUserId(userId);
@@ -355,7 +385,7 @@ public class FileInfoServiceImpl implements FileInfoService{
 			FileInfo updateFileInfo = new FileInfo();
 			updateFileInfo.setFileSize(new File(targetFilePath).length());
 			updateFileInfo.setFileCover(cover);
-			updateFileInfo.setStatus(transcodeSuccess?FileStatusEnum.TRANSCODING_COMPLETED.getStatus() : FileStatusEnum.TRANSCODING_FAILED.getStatus());
+			updateFileInfo.setStatus(transcodeSuccess?FileStatusEnum.USING.getStatus() : FileStatusEnum.TRANSCODING_FAILED.getStatus());
 			fileInfoMapper.updateWithOldStatus(fileId,sessionWebUserDto.getUserId(),updateFileInfo,FileStatusEnum.TRANSCODING.getStatus());
 		}
 	}

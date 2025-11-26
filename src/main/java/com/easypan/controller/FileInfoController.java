@@ -91,4 +91,23 @@ public class FileInfoController extends CommonFileController{
 		super.getFile(response,fileId,sessionWebUserDto.getUserId());
 	}
 
+	@PostMapping("/newFolder")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO newFolder(HttpSession session,
+						  	@VerifyParam(required = true) String filePid,
+						  	@VerifyParam(required = true) String fileName) {
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+   		FileInfo fileInfo = fileInfoService.newFolder(filePid,sessionWebUserDto.getUserId(),fileName);
+		return getSuccessResponseVO(fileInfo);
+	}
+
+	@RequestMapping("/getFolderInfo")
+	@GlobalInterceptor(checkParams = true)
+	public ResponseVO getFolderInfo(HttpSession session,
+									@VerifyParam(required = true) String path){
+		SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+		return super.getFolderInfo(path,sessionWebUserDto.getUserId());
+	}
+
+
 }

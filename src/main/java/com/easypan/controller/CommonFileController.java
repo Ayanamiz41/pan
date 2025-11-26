@@ -3,13 +3,18 @@ package com.easypan.controller;
 import com.easypan.entity.config.AppConfig;
 import com.easypan.entity.constants.Constants;
 import com.easypan.entity.po.FileInfo;
+import com.easypan.entity.query.FileInfoQuery;
+import com.easypan.entity.vo.ResponseVO;
 import com.easypan.enums.FileCatogoryEnum;
+import com.easypan.enums.FileFolderTypeEnum;
 import com.easypan.service.FileInfoService;
 import com.easypan.utils.StringTools;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.File;
+import java.util.List;
 
 public class CommonFileController extends ABaseController{
     @Autowired
@@ -99,5 +104,28 @@ public class CommonFileController extends ABaseController{
         // 将文件内容写入到响应中（响应给前端播放器）
         readFile(response, filePath);
     }
+
+    // 获取指定路径对应的文件夹信息
+    protected ResponseVO getFolderInfo(String path, String userId) {
+        // 将路径按 "/" 分割为数组，例如 "a/b/c" -> ["a", "b", "c"]
+        String[] pathArray = path.split("/");
+
+        // 构造查询对象
+        FileInfoQuery fileInfoQuery = new FileInfoQuery();
+        fileInfoQuery.setUserId(userId); // 设置所属用户
+        fileInfoQuery.setFolderType(FileFolderTypeEnum.FOLDER.getType()); // 设置类型为“文件夹”
+        fileInfoQuery.setFileIdArray(pathArray); // 设置需要查询的多个文件夹 ID
+
+        // 构造排序语句，按路径中各个文件夹的顺序排序
+        String orderBy = "field(file_id,\"" + StringUtils.join(pathArray, "\",\"") + "\")";
+        fileInfoQuery.setOrderBy(orderBy); // 设置排序字段
+
+        // 根据参数查询文件夹信息
+        List<FileInfo> fileInfoList = fileInfoService.findListByParam(fileInfoQuery);
+
+        // 返回查询结果（包装成统一响应结构）
+        return getSuccessResponseVO(fileInfoList);
+    }
+
 
 }
