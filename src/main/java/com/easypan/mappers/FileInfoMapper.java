@@ -3,6 +3,7 @@ package com.easypan.mappers;
 import com.easypan.entity.po.FileInfo;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -77,4 +78,6 @@ public interface FileInfoMapper<T, P> extends BaseMapper {
 	 * @return
 	 */
 	Integer deleteFileByUserId(@Param("userId") String userId);
+
+
 }

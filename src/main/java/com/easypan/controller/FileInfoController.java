@@ -46,9 +46,9 @@ public class FileInfoController extends CommonFileController{
 	@GlobalInterceptor
 	public ResponseVO loadDataList(HttpSession session, FileInfoQuery query,String category) {
 
-		FileCatogoryEnum catogoryEnum = FileCatogoryEnum.getByCode(category);
-		if(catogoryEnum != null){
-			query.setFileCategory(catogoryEnum.getCategory());
+		FileCatogoryEnum categoryEnum = FileCatogoryEnum.getByCode(category);
+		if(categoryEnum != null){
+			query.setFileCategory(categoryEnum.getCategory());
 		}
 		query.setUserId(getUserInfoFromSession(session).getUserId());
 		query.setOrderBy("last_update_time desc");
@@ -73,7 +73,6 @@ public class FileInfoController extends CommonFileController{
 	}
 
 	@GetMapping("/getImage/{imageFolder}/{imageName}")
-	@GlobalInterceptor(checkParams = true)
 	public void getImage(HttpServletResponse response,@PathVariable("imageFolder") String imageFolder,@PathVariable("imageName") String imageName) {
 		super.getImage(response, imageFolder, imageName);
 	}

@@ -131,4 +131,15 @@ public interface FileInfoService{
 	 * @param fileIds
 	 */
 	void delFileBatch(String userId,String fileIds,Boolean admin);
+
+
+	/**
+	 * 校验子目录 fileId 是否在共享根 rootFilePid 之下
+	 * @param rootFilePid
+	 * @param userId
+	 * @param fileId
+	 */
+	void checkRootFilePid(String rootFilePid,String userId,String fileId);
+
+	void saveShare(String shareId,String shareFileIds,String myFolderId,String shareUserId,String currentUserId);
 }

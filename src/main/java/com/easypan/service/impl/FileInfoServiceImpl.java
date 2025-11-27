@@ -47,7 +47,7 @@ import javax.annotation.Resource;
  * @Author: false
  * @Date: 2025/07/25 20:22:51
  */
-@Service("FileInfoMapper")
+@Service
 public class FileInfoServiceImpl implements FileInfoService{
 
 	@Resource
@@ -544,6 +544,45 @@ public class FileInfoServiceImpl implements FileInfoService{
 	}
 
 	/**
+	 * 校验子目录 fileId 是否在共享根 rootFilePid 之下
+	 */
+	public void checkRootFilePid(String rootFilePid, String userId, String fileId) {
+		// 如果 fileId 为空，视为非法
+		if (StringTools.isEmpty(fileId)) {
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		// 如果访问的目录正好是共享根目录本身，则合法
+		if (rootFilePid.equals(fileId)) {
+			return;
+		}
+		// 否则递归向上校验父级目录
+		checkFilePid(rootFilePid, userId, fileId);
+	}
+
+
+	/**
+	 * 递归查找并验证，直到找到 rootFilePid 或到达顶层
+	 */
+	private void checkFilePid(String rootFilePid, String userId, String fileId) {
+		// 查询当前目录信息
+		FileInfo fileInfo = fileInfoMapper.selectByFileIdAndUserId(fileId, userId);
+		// 如果不存在或不属于该用户，则非法
+		if (fileInfo == null) {
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		// 如果已到顶层（父ID为"0"）还没找到根，则非法
+		if (Constants.ZERO_STR.equals(fileInfo.getFilePid())) {
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		// 如果当前节点的父ID就是根目录，验证通过
+		if (fileInfo.getFilePid().equals(rootFilePid)) {
+			return;
+		}
+		// 否则继续向上一级验证
+		checkFilePid(rootFilePid, userId, fileInfo.getFilePid());
+	}
+
+	/**
 	 * 递归查找某文件夹下所有的子文件，并把它们的 fileId 加入到 fileIdList 中
 	 * @param fileIdList
 	 * @param userId
@@ -572,6 +611,131 @@ public class FileInfoServiceImpl implements FileInfoService{
 		}
 	}
 
+	/**
+	 * 递归拷贝并重构一个文件（或文件夹）及其所有子节点的信息到新的列表中
+	 *
+	 * @param copyList       最终要插入的新 FileInfo 对象列表
+	 * @param fileInfo       当前要拷贝的源 FileInfo 对象（会在此对象上修改）
+	 * @param sourceUserId   源文件所属的用户 ID
+	 * @param currentUserId  拷贝到目标的用户 ID
+	 * @param curDate        统一使用的拷贝时间戳
+	 * @param newFilePid     拷贝后该项在目标用户的父目录 ID
+	 */
+	private void findAllSubFolderFileList(List<FileInfo> copyList,
+										  FileInfo fileInfo,
+										  String sourceUserId,
+										  String currentUserId,
+										  Date curDate,
+										  String newFilePid) {
+		String sourceFileId = fileInfo.getFileId();      // 1. 记录源文件（或文件夹）原始 ID
+		fileInfo.setCreateTime(curDate);                 // 2. 重置为拷贝时间
+		fileInfo.setLastUpdateTime(curDate);             // 3. 同步更新时间
+		fileInfo.setFilePid(newFilePid);                 // 4. 设置到目标目录的新父 ID
+		fileInfo.setUserId(currentUserId);                // 5. 指定为目标用户所有
+		String newFileId = StringTools.getRandomString(Constants.LENGTH_10);
+		fileInfo.setFileId(newFileId);                   // 6. 生成并设置新的唯一 ID
+		copyList.add(fileInfo);                          // 7. 将“修改后”的 FileInfo 放入待插入列表
+
+		// 8. 如果这是一个文件夹，就继续查它的子级
+		if (fileInfo.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())) {
+			FileInfoQuery fileInfoQuery = new FileInfoQuery();
+			fileInfoQuery.setFilePid(sourceFileId);      // 查源文件夹下的直接子项
+			fileInfoQuery.setUserId(sourceUserId);       // 限定为原用户的数据
+			List<FileInfo> sourceFileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+
+			// 9. 递归拷贝每个子项
+			for (FileInfo item : sourceFileInfoList) {
+				findAllSubFolderFileList(
+						copyList,
+						item,
+						sourceUserId,
+						currentUserId,
+						curDate,
+						newFileId     // 子项的新父 ID 是刚才生成的 newFileId
+				);
+			}
+		}
+	}
+
+	/**
+	 * 实现“分享到自己目录”：把别人分享给你的那些文件／文件夹及其所有子孙
+	 * 拷贝到你指定的 myFolderId 目录下，并更新你的空间使用量。
+	 *
+	 * @param shareRootFileId  本次分享任务的根目录文件id
+	 * @param shareFileIds    从分享者处拷贝哪些文件／文件夹（逗号分隔 ID 列表）
+	 * @param myFolderId      你本地要放到哪个目录（父 ID）
+	 * @param shareUserId     分享者用户 ID
+	 * @param currentUserId   当前登录用户 ID（接收分享者文件的目标用户）
+	 */
+	public void saveShare(String shareRootFileId,
+						  String shareFileIds,
+						  String myFolderId,
+						  String shareUserId,
+						  String currentUserId) {
+		// A. 找到目标目录下已有文件，用于后续重名检测
+		String[] shareFileIdArray = shareFileIds.split(",");
+		FileInfoQuery fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(currentUserId);
+		fileInfoQuery.setFilePid(myFolderId);
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+		Map<String, FileInfo> fileInfoMap = fileInfoList.stream()
+				.collect(Collectors.toMap(
+						FileInfo::getFileName,
+						Function.identity(),
+						(o1, o2) -> o1
+				));
+
+		// B. 校验：确保每个要拷贝的 fileId 都在 shareRootFileId 目录下
+		for (String fileId : shareFileIdArray) {
+			checkRootFilePid(shareRootFileId, shareUserId, fileId);
+		}
+
+		// C. 查询“分享者”这批 fileId 对应的源 FileInfo 列表
+		fileInfoQuery = new FileInfoQuery();
+		fileInfoQuery.setUserId(shareUserId);
+		fileInfoQuery.setFileIdArray(shareFileIdArray);
+		List<FileInfo> shareFileInfoList = fileInfoMapper.selectList(fileInfoQuery);
+
+		// D. 递归拷贝：把每个源节点及其子孙重构到 copyFileList
+		List<FileInfo> copyFileList = new ArrayList<>();
+		Date curDate = new Date();
+		for (FileInfo item : shareFileInfoList) {
+			// D1. 如果目标目录已有同名，先改个名
+			FileInfo existing = fileInfoMap.get(item.getFileName());
+			if (existing != null) {
+				item.setFileName(StringTools.rename(item.getFileName()));
+			}
+			// D2. 递归拷贝到 copyFileList
+			findAllSubFolderFileList(
+					copyFileList,
+					item,
+					shareUserId,
+					currentUserId,
+					curDate,
+					myFolderId   // 顶层父目录
+			);
+		}
+
+		// E. 校验并更新目标用户的空间配额
+		UserInfo userInfo = userInfoMapper.selectByUserId(currentUserId);
+		long fileSizeSum = 0L;
+		for (FileInfo item : copyFileList) {
+			if (item.getFolderType().equals(FileFolderTypeEnum.FILE.getType())) {
+				fileSizeSum += item.getFileSize();
+			}
+		}
+		if (fileSizeSum + userInfo.getUseSpace() > userInfo.getTotalSpace()) {
+			throw new BusinessException(ResponseCodeEnum.CODE_904); // 超出配额
+		}
+		UserSpaceDto userSpaceDto = new UserSpaceDto();
+		userSpaceDto.setUseSpace(userInfo.getUseSpace() + fileSizeSum);
+		userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
+		redisComponent.saveUserSpace(currentUserId, userSpaceDto);
+		userInfoMapper.updateUserSpace(currentUserId, fileSizeSum, null);
+
+		// F. 批量插入所有拷贝后的记录
+		fileInfoMapper.insertBatch(copyFileList);
+	}
 
 	private void checkFileName(String filePid,String userId,String fileName,Integer folderType){
 		FileInfoQuery fileInfoQuery = new FileInfoQuery();

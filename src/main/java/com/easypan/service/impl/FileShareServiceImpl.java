@@ -27,7 +27,7 @@ import javax.annotation.Resource;
  * @Author: false
  * @Date: 2025/07/29 20:41:18
  */
-@Service("FileShareMapper")
+@Service
 public class FileShareServiceImpl implements FileShareService{
 
 	@Resource

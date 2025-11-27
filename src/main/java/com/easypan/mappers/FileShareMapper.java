@@ -34,4 +34,11 @@ public interface FileShareMapper<T, P> extends BaseMapper {
 	 */
 	Integer deleteFileShareBatch(@Param("shareIdList") List<String> shareIdList,@Param("userId")String userId);
 
+	/**
+	 * 根据shareId将浏览次数加1
+	 * @param shareId
+	 * @return
+	 */
+	Integer updateShareShowCountPlusOne(@Param("shareId")String shareId);
+
 }

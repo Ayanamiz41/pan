@@ -46,7 +46,7 @@ import javax.servlet.http.HttpServletResponse;
  * @Author: false
  * @Date: 2025/07/23 12:25:33
  */
-@Service("UserInfoMapper")
+@Service
 public class UserInfoServiceImpl implements UserInfoService{
 
 	@Autowired

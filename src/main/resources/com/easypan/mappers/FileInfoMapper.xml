@@ -649,6 +649,8 @@
 		</if>
 	</update>
 
+
+
 	<!-- 根据 FileIdAndUserId 删除 -->
 	<delete id="deleteByFileIdAndUserId">
 		delete from file_info where file_id =#{fileId} and user_id =#{userId}

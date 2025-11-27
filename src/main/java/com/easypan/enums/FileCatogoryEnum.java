@@ -2,7 +2,7 @@ package com.easypan.enums;
 
 public enum FileCatogoryEnum {
     VIDEO(1,"video","视频"),
-    AUDIO(2,"audio","音频"),
+    MUSIC(2,"music","音频"),
     IMAGE(3,"image","图片"),
     DOC(4,"doc","文档"),
     OTHERS(5,"others","其他");

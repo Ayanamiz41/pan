@@ -36,7 +36,7 @@ import javax.mail.internet.MimeMessage;
  * @Author: false
  * @Date: 2025/07/23 16:16:27
  */
-@Service("EmailCodeMapper")
+@Service
 public class EmailCodeServiceImpl implements EmailCodeService{
 
 	private static final Logger logger = LoggerFactory.getLogger(EmailCodeServiceImpl.class);

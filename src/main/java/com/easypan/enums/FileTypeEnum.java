@@ -4,7 +4,7 @@ import org.apache.commons.lang3.ArrayUtils;
 
 public enum FileTypeEnum {
     VIDEO(FileCatogoryEnum.VIDEO, 1, new String[]{".mp4", ".avi", "rmvb", ".mkv", ".mov"}, "视频"),
-    AUDIO(FileCatogoryEnum.AUDIO, 2, new String[]{".mp3", ".wav", "wma", ".mp2", ".flac", ".midi", ".ra", ".ape", ".aac", ".cda"}, "音频"),
+    MUSIC(FileCatogoryEnum.MUSIC, 2, new String[]{".mp3", ".wav", "wma", ".mp2", ".flac", ".midi", ".ra", ".ape", ".aac", ".cda"}, "音频"),
     IMAGE(FileCatogoryEnum.IMAGE, 3, new String[]{".jpeg", ".jpg", ".png", ".gif", ".bmp", ".dds", ".psd", ".pdt", ".webp", ".xmp", ".svg", ".tiff"}, "图片"),
     PDF(FileCatogoryEnum.DOC, 4, new String[]{".pdf"}, "pdf"),
     WORD(FileCatogoryEnum.DOC, 5, new String[]{".docx"}, "word"),
