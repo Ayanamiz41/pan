@@ -1,6 +1,7 @@
 package com.easypan.utils;
 
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -41,5 +42,11 @@ public class DateUtils {
             e.printStackTrace();
         }
         return null;
+    }
+
+    public static Date getDateAfterDays(Integer days){
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DAY_OF_YEAR, days);
+        return calendar.getTime();
     }
 }

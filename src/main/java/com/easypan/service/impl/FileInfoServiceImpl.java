@@ -579,6 +579,7 @@ public class FileInfoServiceImpl implements FileInfoService{
 		fileInfoQuery.setFilePid(filePid);
 		fileInfoQuery.setFolderType(folderType);
 		fileInfoQuery.setFileName(fileName);
+		fileInfoQuery.setDelFlag(FileDelFlagEnum.USING.getFlag());
 		Integer count = fileInfoMapper.selectCount(fileInfoQuery);
 		if(count>0){
 			throw new BusinessException("此目录下已经存在同名"+(folderType.equals(FileFolderTypeEnum.FILE.getType())?"文件":"文件夹")+"请修改名称");

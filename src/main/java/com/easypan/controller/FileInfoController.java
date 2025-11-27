@@ -42,7 +42,7 @@ public class FileInfoController extends CommonFileController{
 	 * @param query
 	 * @return
 	 */
-	@PostMapping("/loadDataList")
+	@RequestMapping("/loadDataList")
 	@GlobalInterceptor
 	public ResponseVO loadDataList(HttpSession session, FileInfoQuery query,String category) {
 
