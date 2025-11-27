@@ -467,6 +467,7 @@
 		<include refid="base_column_list"/> 
 		from file_info where file_id =#{fileId} and user_id =#{userId}
 	</select>
+
 	<select id="selectUseSpaceByUserId" resultType="java.lang.Long">
 		select ifnull(sum(file_size),0) from file_info where user_id = #{userId}
 	</select>
@@ -648,6 +649,21 @@
 	<!-- 根据 FileIdAndUserId 删除 -->
 	<delete id="deleteByFileIdAndUserId">
 		delete from file_info where file_id =#{fileId} and user_id =#{userId}
+	</delete>
+
+
+	<delete id="deleteFileBatchWithOldDelFlag">
+		delete from file_info
+		where user_id = #{userId}
+		<if test="filePidList!=null">
+			and file_pid in (<foreach collection="filePidList" separator="," item="item">#{item}</foreach>)
+		</if>
+		<if test="fileIdList!=null">
+			and file_id in (<foreach collection="fileIdList" separator="," item="item">#{item}</foreach>)
+		</if>
+		<if test="oldDelFlag!=null">
+			and del_flag = #{oldDelFlag}
+		</if>
 	</delete>
 
 </mapper>

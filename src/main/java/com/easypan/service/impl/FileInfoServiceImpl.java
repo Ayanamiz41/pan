@@ -498,11 +498,53 @@ public class FileInfoServiceImpl implements FileInfoService{
 		updateFileInfo.setFilePid(Constants.ZERO_STR);
 		updateFileInfo.setLastUpdateTime(new Date());
 		fileInfoMapper.updateFileDelFlagBatch(updateFileInfo,userId, null, recFileIdList, FileDelFlagEnum.RECYCLE.getFlag());
+	}
+
+	/**
+	 * 批量彻底删除文件
+	 * @param userId
+	 * @param fileIds
+	 * @param isAdmin
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void delFileBatch(String userId, String fileIds,Boolean isAdmin) {
+		String[] fileIdArray = fileIds.split(",");
+		FileInfoQuery query = new FileInfoQuery();
+		query.setUserId(userId);
+		query.setFileIdArray(fileIdArray);
+		query.setDelFlag(FileDelFlagEnum.RECYCLE.getFlag());
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(query);
+
+		//所选文件的所有子文件id
+		List<String> delSubFileIdList = new ArrayList<>();
+		for(FileInfo item:fileInfoList){
+			if(item.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())){
+				findAllSubFolderFileList(delSubFileIdList,userId, item.getFileId(), FileDelFlagEnum.DEL.getFlag());
+			}
+		}
+		//删除所选文件子文件
+		if(!delSubFileIdList.isEmpty()) {
+			fileInfoMapper.deleteFileBatchWithOldDelFlag(userId, null, delSubFileIdList, isAdmin ? null : FileDelFlagEnum.DEL.getFlag());
+		}
+		//删除所选文件
+		List<String> delFileIdList = Arrays.asList(fileIdArray);
+		fileInfoMapper.deleteFileBatchWithOldDelFlag(userId,null,delFileIdList,isAdmin?null:FileDelFlagEnum.RECYCLE.getFlag());
+
+		//更新用户使用空间
+		Long useSpace = fileInfoMapper.selectUseSpaceByUserId(userId);
+		UserInfo updateUserInfo = new UserInfo();
+		updateUserInfo.setUseSpace(useSpace);
+		userInfoMapper.updateByUserId(updateUserInfo, userId);
+
+		//设置缓存
+		UserSpaceDto userSpaceDto = redisComponent.getUserSpace(userId);
+		userSpaceDto.setUseSpace(useSpace);
+		redisComponent.saveUserSpace(userId,userSpaceDto);
 
 	}
 
 	/**
-	 * 递归查找某文件夹下所有的子文件夹，并把它们的 fileId 加入到 fileIdList 中
+	 * 递归查找某文件夹下所有的子文件，并把它们的 fileId 加入到 fileIdList 中
 	 * @param fileIdList
 	 * @param userId
 	 * @param fileId

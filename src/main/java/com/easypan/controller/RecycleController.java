@@ -45,4 +45,12 @@ public class RecycleController extends ABaseController{
         return getSuccessResponseVO(null);
     }
 
+    @PostMapping("/delFile")
+    @GlobalInterceptor(checkParams = true)
+    public ResponseVO delFile(HttpSession session,@VerifyParam(required = true) String fileIds) {
+        SessionWebUserDto sessionWebUserDto = getUserInfoFromSession(session);
+        fileInfoService.delFileBatch(sessionWebUserDto.getUserId(),fileIds,false);
+        return getSuccessResponseVO(null);
+    }
+
 }
