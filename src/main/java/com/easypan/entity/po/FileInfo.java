@@ -88,7 +88,6 @@ public class FileInfo implements Serializable {
 	/**
  	 * 状态 0：转码中  1：转码失败  2：转码成功  
  	 */
-	@JsonIgnore
 	private Integer status;
 
 	/**
@@ -103,6 +102,18 @@ public class FileInfo implements Serializable {
  	 */
 	private Integer delFlag;
 
+	/**
+	 * 发布人昵称
+	 */
+	private String nickName;
+
+	public String getNickName() {
+		return nickName;
+	}
+
+	public void setNickName(String nickName) {
+		this.nickName = nickName;
+	}
 
 	public void setFileId(String fileId) {
 		this.fileId = fileId;

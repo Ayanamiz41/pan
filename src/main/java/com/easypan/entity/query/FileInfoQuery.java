@@ -29,6 +29,11 @@ public class FileInfoQuery extends BaseQuery {
 	private String userIdFuzzy;
 
 	/**
+	 * 是否查用户昵称
+	 */
+	private Boolean queryUserNickName;
+
+	/**
  	 * 文件md5值 查询对象
  	 */
 	private String fileMd5;

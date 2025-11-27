@@ -19,7 +19,7 @@ public enum FileCatogoryEnum {
 
     public static FileCatogoryEnum getByCode(String code){
         for(FileCatogoryEnum item : FileCatogoryEnum.values()){
-            if(item.getCode().equals(code)){
+            if(item.getCode().equalsIgnoreCase(code)){
                 return item;
             }
         }

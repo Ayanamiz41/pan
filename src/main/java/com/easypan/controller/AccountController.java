@@ -200,13 +200,13 @@ public class AccountController extends ABaseController{
 		if (!file.exists()) {
 
 			// 如果默认头像也不存在，输出提示文字（非图片）
-			if (!new File(appConfig.getProjectFolder() + avatarFolderName + Constants.AVATAR_DEFAULT).exists()) {
+			if (!new File(appConfig.getProjectFolder() + avatarFolderName +"/"+ Constants.AVATAR_DEFAULT).exists()) {
 				printNoDefaultAvatar(response);
 				return;
 			}
 
 			// 使用默认头像路径
-			avatarPath = appConfig.getProjectFolder() + avatarFolderName + Constants.AVATAR_DEFAULT;
+			avatarPath = appConfig.getProjectFolder() + avatarFolderName + "/"+Constants.AVATAR_DEFAULT;
 		}
 
 		// 设置响应类型为图片 JPG

@@ -548,16 +548,16 @@
 			<if test="AddUseSpace!=null">
 				use_space = use_space + #{AddUseSpace},
 			</if>
-			<if test="AddTotalSpace!=null">
-				total_space = total_space + #{AddTotalSpace},
+			<if test="totalSpace!=null">
+				total_space = #{totalSpace},
 			</if>
 		</set>
 		where user_id = #{userId}
 		<if test="AddUseSpace!=null">
 			and <![CDATA[ (use_space+#{AddUseSpace})<=total_space]]>
 		</if>
-		<if test="AddTotalSpace!=null">
-			and<![CDATA[ (total_space+#{AddTotalSpace})>=use_space]]>
+		<if test="totalSpace!=null">
+			and<![CDATA[ #{totalSpace}>=use_space]]>
 		</if>
 	</update>
 

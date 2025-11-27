@@ -18,6 +18,7 @@ import com.easypan.entity.dto.SysSettingDto;
 import com.easypan.entity.dto.UserSpaceDto;
 import com.easypan.entity.query.SimplePage;
 import com.easypan.enums.PageSize;
+import com.easypan.enums.ResponseCodeEnum;
 import com.easypan.enums.UserStatusEnum;
 import com.easypan.exception.BusinessException;
 import com.easypan.mappers.FileInfoMapper;
@@ -243,7 +244,7 @@ public class UserInfoServiceImpl implements UserInfoService{
 
 		// 从 Redis 获取系统配置，设置用户初始可用总空间（单位转换为字节）
 		SysSettingDto sysSettingDto = redisComponent.getSysSettingDto();
-		userInfo.setTotalSpace(sysSettingDto.getUserInitTotalSpace() * Constants.MB);
+		userInfo.setTotalSpace(sysSettingDto.getUserInitUseSpace() * Constants.MB);
 
 		// 插入新用户数据到数据库
 		userInfoMapper.insert(userInfo);
@@ -282,9 +283,9 @@ public class UserInfoServiceImpl implements UserInfoService{
 
 		// 判断该邮箱是否为管理员邮箱，设置管理员标识
 		if(ArrayUtils.contains(appConfig.getAdminEmails().split(","), email)){
-			sessionWebUserDto.setIsAdmin(true);
+			sessionWebUserDto.setAdmin(true);
 		} else {
-			sessionWebUserDto.setIsAdmin(false);
+			sessionWebUserDto.setAdmin(false);
 		}
 
 		// 创建用户空间信息对象，并设置总空间和已用空间
@@ -350,7 +351,7 @@ public class UserInfoServiceImpl implements UserInfoService{
 			user.setUserId(StringTools.getRandomNumber(Constants.LENGTH_10));
 			user.setLastLoginTime(curDate);
 			user.setUseSpace(0L);
-			user.setTotalSpace(redisComponent.getSysSettingDto().getUserInitTotalSpace() * Constants.MB);
+			user.setTotalSpace(redisComponent.getSysSettingDto().getUserInitUseSpace() * Constants.MB);
 			userInfoMapper.insert(user);
 		}else{
 			UserInfo updateUserInfo =  new UserInfo();
@@ -362,9 +363,9 @@ public class UserInfoServiceImpl implements UserInfoService{
 		sessionWebUserDto.setUserId(user.getUserId());
 		sessionWebUserDto.setAvatar(avatar);
 		if(ArrayUtils.contains(appConfig.getAdminEmails().split(","),user.getEmail()==null?"":user.getEmail())){
-			sessionWebUserDto.setIsAdmin(true);
+			sessionWebUserDto.setAdmin(true);
 		} else {
-			sessionWebUserDto.setIsAdmin(false);
+			sessionWebUserDto.setAdmin(false);
 		}
 		UserSpaceDto userSpaceDto = new UserSpaceDto();
 		userSpaceDto.setTotalSpace(user.getTotalSpace());
@@ -372,6 +373,48 @@ public class UserInfoServiceImpl implements UserInfoService{
 		userSpaceDto.setUseSpace(useSpace);
 		redisComponent.saveUserSpace(user.getUserId(), userSpaceDto);
 		return sessionWebUserDto;
+	}
+
+	/**
+	 * 更改用户状态
+	 * @param userId
+	 * @param status
+	 */
+	public void updateUserStatus(String userId, Integer status) {
+		UserInfo userInfo = userInfoMapper.selectByUserId(userId);
+		if(userInfo == null){
+			throw new BusinessException(ResponseCodeEnum.CODE_600);
+		}
+		UserInfo updateUserInfo = new UserInfo();
+		updateUserInfo.setStatus(UserStatusEnum.getByStatus(status).getStatus());
+		if(status.equals(UserStatusEnum.DISABLE.getStatus())){
+			//禁用用户同时删除用户所有文件，并将使用空间设置为0
+			updateUserInfo.setUseSpace(0L);
+			UserSpaceDto userSpaceDto = new UserSpaceDto();
+			userSpaceDto.setUseSpace(0L);
+			userSpaceDto.setTotalSpace(userInfo.getTotalSpace());
+			redisComponent.saveUserSpace(userId, userSpaceDto);
+			fileInfoMapper.deleteFileByUserId(userId);
+		}
+		userInfoMapper.updateByUserId(updateUserInfo, userId);
+	}
+
+	/**
+	 * 更改用户使用总空间
+	 * @param userId
+	 * @param changeSpace
+	 */
+	public void updateUserSpace(String userId, Long changeSpace) {
+		Long space = changeSpace*Constants.MB;
+		UserInfo userInfo = userInfoMapper.selectByUserId(userId);
+		if(space<userInfo.getUseSpace()){
+			throw new BusinessException("总空间不能小于已使用空间");
+		}
+		userInfoMapper.updateUserSpace(userId,null,space);
+		UserSpaceDto userSpaceDto = new UserSpaceDto();
+		userSpaceDto.setTotalSpace(space);
+		userSpaceDto.setUseSpace(userInfo.getUseSpace());
+		redisComponent.saveUserSpace(userId, userSpaceDto);
 	}
 
 	private String getQQAccessToken(String code){

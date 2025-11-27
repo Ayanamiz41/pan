@@ -63,7 +63,6 @@ public class UserInfo implements Serializable {
 	/**
  	 * 0：禁用   1：启用
  	 */
-	@JsonIgnore
 	private Integer status;
 
 	/**

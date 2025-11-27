@@ -130,5 +130,5 @@ public interface FileInfoService{
 	 * @param userId
 	 * @param fileIds
 	 */
-	void delFileBatch(String userId,String fileIds,Boolean isAdmin);
+	void delFileBatch(String userId,String fileIds,Boolean admin);
 }

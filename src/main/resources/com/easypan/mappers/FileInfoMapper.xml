@@ -157,7 +157,10 @@
 	<select id="selectList" resultMap="base_result_map">
 		SELECT 
 		<include refid="base_column_list"/>
-			FROM file_info
+		<if test="query.queryUserNickName!=null and query.queryUserNickName">
+			,(select nick_name from user_info u where u.user_id = f.user_id) nickName
+		</if>
+			FROM file_info f
 		<include refid="query_condition"/>
 		<if test="query.orderBy != null">
 			order by ${query.orderBy}
@@ -664,6 +667,9 @@
 		<if test="oldDelFlag!=null">
 			and del_flag = #{oldDelFlag}
 		</if>
+	</delete>
+	<delete id="deleteFileByUserId">
+		delete from file_info where user_id = #{userId}
 	</delete>
 
 </mapper>

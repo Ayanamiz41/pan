@@ -25,9 +25,17 @@ public class RedisComponent {
         return sysSettingDto;
     }
 
+    public void saveSysSettingDto(SysSettingDto sysSettingDto){
+        if(sysSettingDto == null){
+            return;
+        }
+        redisUtils.set(Constants.REDIS_KEY_SYS_SETTING, sysSettingDto);
+    }
+
     public void saveUserSpace(String userId, UserSpaceDto userSpaceDto){
         redisUtils.setex(Constants.REDIS_KEY_USER_SPACE+userId,userSpaceDto,Constants.REDIS_KEY_EXPIRES_DAY);
     }
+
 
     public UserSpaceDto getUserSpace(String userId){
         UserSpaceDto userSpaceDto =  (UserSpaceDto) redisUtils.get(Constants.REDIS_KEY_USER_SPACE+userId);
@@ -35,7 +43,7 @@ public class RedisComponent {
             userSpaceDto = new UserSpaceDto();
             Long useSpace = fileInfoMapper.selectUseSpaceByUserId(userId);
             userSpaceDto.setUseSpace(useSpace);
-            userSpaceDto.setTotalSpace(getSysSettingDto().getUserInitTotalSpace()*Constants.MB);
+            userSpaceDto.setTotalSpace(getSysSettingDto().getUserInitUseSpace()*Constants.MB);
             saveUserSpace(userId, userSpaceDto);
         }
         return userSpaceDto;

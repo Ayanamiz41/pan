@@ -203,7 +203,7 @@ public class GlobalOperationAspect {
         if(sessionWebUserDto == null){
             throw new BusinessException(ResponseCodeEnum.CODE_901);
         }
-        if(checkAdmin&&!sessionWebUserDto.getIsAdmin()){
+        if(checkAdmin&&!sessionWebUserDto.getAdmin()){
             throw new BusinessException(ResponseCodeEnum.CODE_404);
         }
     }

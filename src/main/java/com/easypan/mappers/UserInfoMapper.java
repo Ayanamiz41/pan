@@ -73,9 +73,9 @@ public interface UserInfoMapper<T, P> extends BaseMapper {
 	 * 根据userId更新用户使用空间和总空间
 	 * @param userId
 	 * @param AddUseSpace
-	 * @param AddTotalSpace
+	 * @param totalSpace
 	 * @return
 	 */
-	Integer updateUserSpace(@Param("userId") String userId,@Param("AddUseSpace") Long AddUseSpace,@Param("AddTotalSpace") Long AddTotalSpace);
+	Integer updateUserSpace(@Param("userId") String userId,@Param("AddUseSpace") Long AddUseSpace,@Param("totalSpace") Long totalSpace);
 
 }

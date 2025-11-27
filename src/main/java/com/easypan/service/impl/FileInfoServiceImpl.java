@@ -504,31 +504,31 @@ public class FileInfoServiceImpl implements FileInfoService{
 	 * 批量彻底删除文件
 	 * @param userId
 	 * @param fileIds
-	 * @param isAdmin
+	 * @param admin
 	 */
 	@Transactional(rollbackFor = Exception.class)
-	public void delFileBatch(String userId, String fileIds,Boolean isAdmin) {
+	public void delFileBatch(String userId, String fileIds,Boolean admin) {
 		String[] fileIdArray = fileIds.split(",");
 		FileInfoQuery query = new FileInfoQuery();
 		query.setUserId(userId);
 		query.setFileIdArray(fileIdArray);
-		query.setDelFlag(FileDelFlagEnum.RECYCLE.getFlag());
+		query.setDelFlag(admin?FileDelFlagEnum.USING.getFlag() : FileDelFlagEnum.RECYCLE.getFlag());
 		List<FileInfo> fileInfoList = fileInfoMapper.selectList(query);
 
 		//所选文件的所有子文件id
 		List<String> delSubFileIdList = new ArrayList<>();
 		for(FileInfo item:fileInfoList){
 			if(item.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())){
-				findAllSubFolderFileList(delSubFileIdList,userId, item.getFileId(), FileDelFlagEnum.DEL.getFlag());
+				findAllSubFolderFileList(delSubFileIdList,userId, item.getFileId(), admin?FileDelFlagEnum.USING.getFlag():FileDelFlagEnum.DEL.getFlag());
 			}
 		}
 		//删除所选文件子文件
 		if(!delSubFileIdList.isEmpty()) {
-			fileInfoMapper.deleteFileBatchWithOldDelFlag(userId, null, delSubFileIdList, isAdmin ? null : FileDelFlagEnum.DEL.getFlag());
+			fileInfoMapper.deleteFileBatchWithOldDelFlag(userId, null, delSubFileIdList, admin ? null : FileDelFlagEnum.DEL.getFlag());
 		}
 		//删除所选文件
 		List<String> delFileIdList = Arrays.asList(fileIdArray);
-		fileInfoMapper.deleteFileBatchWithOldDelFlag(userId,null,delFileIdList,isAdmin?null:FileDelFlagEnum.RECYCLE.getFlag());
+		fileInfoMapper.deleteFileBatchWithOldDelFlag(userId,null,delFileIdList,admin?null:FileDelFlagEnum.RECYCLE.getFlag());
 
 		//更新用户使用空间
 		Long useSpace = fileInfoMapper.selectUseSpaceByUserId(userId);

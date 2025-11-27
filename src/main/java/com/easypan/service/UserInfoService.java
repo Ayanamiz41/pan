@@ -139,4 +139,19 @@ public interface UserInfoService{
 	 */
 	SessionWebUserDto qqLogin(String code);
 
+	/**
+	 * 更改用户状态
+	 * @param userId
+	 * @param status
+	 */
+	void updateUserStatus(String userId,Integer status);
+
+	/**
+	 * 更改用户使用总空间
+	 * @param userId
+	 * @param changeSpace
+	 */
+	void updateUserSpace(String userId,Long changeSpace);
+
+
 }
