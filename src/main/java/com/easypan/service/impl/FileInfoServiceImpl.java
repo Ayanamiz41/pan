@@ -4,9 +4,7 @@ package com.easypan.service.impl;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -394,6 +392,141 @@ public class FileInfoServiceImpl implements FileInfoService{
 
 			// 更新数据库中该文件的目录信息
 			fileInfoMapper.updateByFileIdAndUserId(updateFileInfo, item.getFileId(), userId);
+		}
+	}
+
+	/**
+	 * 将多个文件或文件夹批量移动到回收站（逻辑删除）
+	 * @param userId
+	 * @param fileIds
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void removeFile2RecycleBatch(String userId, String fileIds) {
+		// 将 fileIds 以逗号分隔成数组
+		String[] fileIdArray = fileIds.split(",");
+
+		// 查询这些 fileId 对应的文件信息，过滤掉已删除的
+		FileInfoQuery query = new FileInfoQuery();
+		query.setUserId(userId);
+		query.setFileIdArray(fileIdArray);
+		query.setDelFlag(FileDelFlagEnum.USING.getFlag());
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(query);
+
+		// 如果一个文件都查不到，直接返回
+		if ((fileInfoList.isEmpty())) {
+			return;
+		}
+
+		// 存储所有需要逻辑删除的文件夹的子文件的fileId
+		List<String> delSubFileIdList = new ArrayList<>();
+		for (FileInfo item : fileInfoList) {
+			// 如果当前项是文件夹，递归查找其所有子文件夹，加入 delFileIdList
+			if (item.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())) {
+				findAllSubFolderFileList(delSubFileIdList,userId, item.getFileId(), FileDelFlagEnum.USING.getFlag());
+			}
+		}
+
+		// 如果有文件需要处理，则批量更新这些文件的 delFlag 为 DEL
+		if (!delSubFileIdList.isEmpty()) {
+			FileInfo updateFileInfo = new FileInfo();
+			updateFileInfo.setDelFlag(FileDelFlagEnum.DEL.getFlag());
+			updateFileInfo.setRecycleTime(new Date());
+			updateFileInfo.setLastUpdateTime(new Date());
+			fileInfoMapper.updateFileDelFlagBatch(updateFileInfo, userId, null, delSubFileIdList, FileDelFlagEnum.USING.getFlag());
+		}
+
+		// 接下来更新传入的所有 fileId（包括文件和文件夹本身）的状态为“已回收”
+		List<String> delFileIdList = Arrays.asList(fileIdArray);
+		FileInfo fileInfo = new FileInfo();
+		fileInfo.setRecycleTime(new Date());
+		fileInfo.setLastUpdateTime(new Date());
+		fileInfo.setDelFlag(FileDelFlagEnum.RECYCLE.getFlag());
+		fileInfoMapper.updateFileDelFlagBatch(fileInfo, userId, null, delFileIdList, FileDelFlagEnum.USING.getFlag());
+	}
+
+	/**
+	 * 批量还原文件
+	 * @param userId
+	 * @param fileIds
+	 */
+	@Transactional(rollbackFor = Exception.class)
+	public void recoverFileBatch(String userId, String fileIds) {
+		String[] fileIdArray = fileIds.split(",");
+		FileInfoQuery query = new FileInfoQuery();
+		query.setUserId(userId);
+		query.setFileIdArray(fileIdArray);
+		query.setDelFlag(FileDelFlagEnum.RECYCLE.getFlag());
+		List<FileInfo> fileInfoList =  fileInfoMapper.selectList(query);
+		//存储所有需要还原的文件夹的子文件的fileId
+		List<String> recSubFileIdList = new ArrayList<>();
+		for (FileInfo item : fileInfoList) {
+			if(item.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())){
+				findAllSubFolderFileList(recSubFileIdList, userId, item.getFileId(), FileDelFlagEnum.DEL.getFlag());
+			}
+		}
+		//查询根目录所有文件
+		query =  new FileInfoQuery();
+		query.setUserId(userId);
+		query.setDelFlag(FileDelFlagEnum.USING.getFlag());
+		query.setFilePid(Constants.ZERO_STR);
+		List<FileInfo> rootFileInfoList = fileInfoMapper.selectList(query);
+		Map<String, FileInfo> fileInfoMap = rootFileInfoList.stream().collect(Collectors.toMap(FileInfo::getFileName, Function.identity(),(o1, o2) -> o1));
+
+		// 如果有文件需要处理，则批量更新这些文件的 delFlag 为 USING
+		if(!recSubFileIdList.isEmpty()){
+			FileInfo updateFileInfo = new FileInfo();
+			updateFileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
+			updateFileInfo.setLastUpdateTime(new Date());
+			fileInfoMapper.updateFileDelFlagBatch(updateFileInfo, userId, null, recSubFileIdList, FileDelFlagEnum.DEL.getFlag());
+		}
+
+		//重命名
+		for(FileInfo item : fileInfoList){
+			FileInfo rootFileInfo = fileInfoMap.get(item.getFileName());
+			if(rootFileInfo != null){
+				//根目录存在同名文件或文件夹,需要重命名
+				FileInfo updateFileInfo = new FileInfo();
+				updateFileInfo.setFileName(StringTools.rename(item.getFileName()));
+				fileInfoMapper.updateByFileIdAndUserId(updateFileInfo, item.getFileId(), item.getUserId());
+			}
+		}
+
+		//将选中的文件更新为使用中，父级id更新为根目录（"0"）
+		List<String> recFileIdList = Arrays.asList(fileIdArray);
+		FileInfo updateFileInfo = new FileInfo();
+		updateFileInfo.setDelFlag(FileDelFlagEnum.USING.getFlag());
+		updateFileInfo.setFilePid(Constants.ZERO_STR);
+		updateFileInfo.setLastUpdateTime(new Date());
+		fileInfoMapper.updateFileDelFlagBatch(updateFileInfo,userId, null, recFileIdList, FileDelFlagEnum.RECYCLE.getFlag());
+
+	}
+
+	/**
+	 * 递归查找某文件夹下所有的子文件夹，并把它们的 fileId 加入到 fileIdList 中
+	 * @param fileIdList
+	 * @param userId
+	 * @param fileId
+	 * @param delFlag
+	 */
+	private void findAllSubFolderFileList(List<String> fileIdList ,String userId, String fileId, Integer delFlag) {
+		//构造查询条件，查找该文件夹下的所有“子文件”
+		FileInfoQuery query = new FileInfoQuery();
+		query.setUserId(userId);
+		query.setFilePid(fileId);  // 父级是当前文件夹
+		query.setDelFlag(delFlag);
+		// 执行查询
+		List<FileInfo> fileInfoList = fileInfoMapper.selectList(query);
+		//此文件不是文件夹或者文件夹中没有文件
+		if(fileInfoList.isEmpty()){
+			return;
+		}
+		for (FileInfo item : fileInfoList) {
+			//将文件或者文件夹加入结果集合中
+			fileIdList.add(item.getFileId());
+			if(item.getFolderType().equals(FileFolderTypeEnum.FOLDER.getType())) {
+				// 对每个子文件夹，递归调用本方法，继续查找下一层
+				findAllSubFolderFileList(fileIdList, userId, item.getFileId(), delFlag);
+			}
 		}
 	}
 

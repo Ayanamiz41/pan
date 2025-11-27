@@ -1,6 +1,9 @@
 package com.easypan.mappers;
 
+import com.easypan.entity.po.FileInfo;
 import org.apache.ibatis.annotations.Param;
+
+import java.util.List;
 
 /**
  * @Description: 文件信息 Mapper
@@ -40,4 +43,17 @@ public interface FileInfoMapper<T, P> extends BaseMapper {
 	 */
 	void updateWithOldStatus(@Param("fileId")String fileId, @Param("userId")String userId,@Param("bean") T t,@Param("oldStatus")Integer oldStatus);
 
+	/**
+	 * 根据旧状态批量更新文件delFlag
+	 * @param fileInfo
+	 * @param userId
+	 * @param filePidList
+	 * @param fileIdList
+	 * @param oldDelFlag
+	 */
+	void updateFileDelFlagBatch(@Param("bean")FileInfo fileInfo,
+								@Param("userId")String userId,
+								@Param("filePidList") List<String> filePidList,
+								@Param("fileIdList")List<String> fileIdList,
+								@Param("oldDelFlag")Integer oldDelFlag);
 }

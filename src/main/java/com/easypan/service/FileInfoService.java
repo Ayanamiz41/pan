@@ -111,5 +111,17 @@ public interface FileInfoService{
 	 */
 	void changeFileFolder(String userId,String fileIds,String filePid);
 
+	/**
+	 * 将文件批量移动到回收站
+	 * @param userId
+	 * @param fileIds
+	 */
+	void removeFile2RecycleBatch(String userId,String fileIds);
 
+	/**
+	 * 批量还原文件
+	 * @param userId
+	 * @param fileIds
+	 */
+	void recoverFileBatch(String userId,String fileIds);
 }
