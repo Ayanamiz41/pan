@@ -129,4 +129,6 @@ public class FileInfoQuery extends BaseQuery {
 	 */
 	private String[] excludeFileIdArray;
 
+	private Boolean queryExpire;
+
 }
